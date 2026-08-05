@@ -1,137 +1,157 @@
+import logging
+import re
+from typing import List, Dict, Any
+from datetime import datetime
+
 import requests
 from bs4 import BeautifulSoup
-import logging
-from typing import List, Dict, Any, Optional
-from datetime import datetime
 
 from app.core.config import settings
 from app.scraper.retry import retry
 
 logger = logging.getLogger(__name__)
 
+# SEBI's internal AJAX endpoint that powers the homepage "What's New" widget.
+# It returns the last ~5 days of all document types (Circulars, Orders, etc.)
+# as an HTML fragment, grouped by date (h3) and category (h4).
+ENTRYLIST_URL = "https://www.sebi.gov.in/sebiweb/ajax/home/entrylist.jsp"
+ENTRYLIST_HEADERS = {
+    "Content-Type": "application/x-www-form-urlencoded",
+    "Referer": "https://www.sebi.gov.in/",
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    ),
+}
+
+
 class SEBIScraper:
     def __init__(self):
-        self.base_url = settings.SEBI_BASE_URL
-        self.circulars_url = settings.SEBI_CIRCULARS_URL
         self.timeout = (settings.HTTP_TIMEOUT_CONNECT, settings.HTTP_TIMEOUT_READ)
-        # Use a standard user agent to avoid basic blocking
-        self.headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
 
-    @retry(max_retries=settings.SCRAPER_MAX_RETRIES, base_delay=settings.SCRAPER_RETRY_DELAY, exceptions=(requests.RequestException,))
-    def fetch_circulars_page(self) -> str:
-        """Fetches the HTML content of the SEBI circulars page."""
-        logger.info(f"Fetching SEBI circulars from {self.circulars_url}")
-        response = requests.get(
-            self.circulars_url, 
-            headers=self.headers, 
-            timeout=self.timeout
+    @retry(
+        max_retries=settings.SCRAPER_MAX_RETRIES,
+        base_delay=settings.SCRAPER_RETRY_DELAY,
+        exceptions=(requests.RequestException,),
+    )
+    def _fetch_entrylist(self) -> str:
+        """
+        Calls SEBI's internal AJAX endpoint directly via a simple POST request.
+        Returns the raw HTML fragment containing the latest entries.
+        No headless browser required.
+        """
+        logger.info(f"Fetching SEBI entry list from {ENTRYLIST_URL}")
+        response = requests.post(
+            ENTRYLIST_URL,
+            data="entryList=Y",
+            headers=ENTRYLIST_HEADERS,
+            timeout=self.timeout,
         )
         response.raise_for_status()
         return response.text
 
     def parse_date(self, date_str: str) -> str:
-        """Parses SEBI date format (e.g., 'Jul 14, 2026') to ISO 8601 (YYYY-MM-DD)."""
+        """Parses SEBI date format (e.g., 'Aug 05, 2026') to ISO 8601 (YYYY-MM-DD)."""
         try:
-            # Try to parse the date, removing any extra whitespace
             dt = datetime.strptime(date_str.strip(), "%b %d, %Y")
             return dt.strftime("%Y-%m-%d")
         except ValueError as e:
             logger.warning(f"Could not parse date '{date_str}': {e}")
             return date_str.strip()
 
+    @staticmethod
+    def _build_reference(detail_url: str, publication_date: str) -> str:
+        """
+        Builds a clean, human-readable circular reference ID from the detail URL.
+
+        SEBI URLs follow the pattern:
+          .../legal/circulars/{mon-YYYY}/{slug}_{numeric_id}.html
+
+        We extract the numeric SEBI document ID and combine it with the date:
+          SEBI-CIRC-{YYYY-MM-DD}-{numeric_id}
+
+        e.g.  SEBI-CIRC-2026-08-03-103314
+
+        This is:
+          - Stable and unique (SEBI numeric ID never changes)
+          - Meaningful (includes source, type, date)
+          - Clean for use as a filename or database key
+        """
+        slug = detail_url.rstrip("/").split("/")[-1]  # e.g. "some-title_103314.html"
+        slug_no_ext = slug.rsplit(".", 1)[0]           # e.g. "some-title_103314"
+        # The numeric SEBI ID is always the last underscore-separated segment
+        parts = slug_no_ext.rsplit("_", 1)
+        numeric_id = parts[-1] if parts[-1].isdigit() else slug_no_ext
+        return f"SEBI-CIRC-{publication_date}-{numeric_id}"
+
     def scrape(self) -> List[Dict[str, Any]]:
         """
-        Scrapes the SEBI circulars page and returns a list of dictionaries containing metadata.
-        Returns empty list on failure.
+        Fetches and parses the SEBI entry list, returning only 'Circulars'
+        as a list of dicts. Returns empty list on failure.
+
+        The HTML structure is:
+            <h3>Aug 05, 2026</h3>
+            <h4>Circulars</h4>
+            <ul>
+                <li><a href="...">Circular title</a></li>
+            </ul>
         """
         try:
-            html_content = self.fetch_circulars_page()
-            soup = BeautifulSoup(html_content, "lxml")
-            
-            scraped_data = []
-            
-            # The data is typically in a table format. We need to find the specific table rows.
-            # On the provided SEBI URL structure, the table is usually within a specific div or id.
-            # Using a generic approach based on standard HTML table structures for this initial implementation.
-            # If SEBI changes their DOM, this will need an update.
-            
-            # Look for the table container. Often SEBI uses 'table-responsive' or similar classes.
-            table_container = soup.find("div", class_="table-responsive") or soup
-            table = table_container.find("table")
-            
-            if not table:
-                logger.error("Could not find the data table on the SEBI page.")
-                return []
-                
-            rows = table.find_all("tr")
-            
-            for row in rows[1:]:  # Skip header row
-                cols = row.find_all("td")
-                
-                # Expected structure: Date, Title (link to details), Department/Category
-                if len(cols) >= 3:
-                    date_col = cols[0].text.strip()
-                    title_col = cols[1]
-                    dept_col = cols[2].text.strip()
-                    
-                    # Extract title and link
-                    a_tag = title_col.find("a")
-                    if a_tag:
-                        title = a_tag.text.strip()
-                        detail_url = a_tag.get("href")
-                        if detail_url and not detail_url.startswith("http"):
-                            detail_url = self.base_url + detail_url
-                            
-                        # The reference number is often within the title or requires visiting the detail page.
-                        # For Phase 1, we will attempt to extract it if it looks like a ref number, 
-                        # or use a hash of the title/url if absent, to ensure a unique ID.
-                        # Real SEBI circulars often start with "SEBI/HO/..."
-                        
-                        # Let's extract the reference if it's explicitly available, else fallback
-                        ref_number = None
-                        
-                        # Sometimes SEBI has a 4th column for reference, or it's embedded in the title text
-                        # We will make a best effort to find something that looks like a reference
-                        import re
-                        ref_match = re.search(r'(SEBI/[A-Z0-9/]+)', title)
-                        if ref_match:
-                            ref_number = ref_match.group(1)
-                        else:
-                            # Use a slug of the URL as a fallback reference if no obvious ref number is found
-                            ref_number = detail_url.split("/")[-1].split(".")[0] if detail_url else f"REF-{hash(title)}"
-                            
-                        # We also need the PDF URL. Often, the detail URL leads to a page WITH the PDF.
-                        # Or sometimes the link itself IS the PDF.
-                        pdf_url = detail_url
-                        
-                        # If the detail_url is not a PDF, we technically need to scrape the detail page.
-                        # For Phase 1 optimization, we'll store the detail URL. The downloader can handle logic if needed,
-                        # or we assume SEBI provides direct PDF links or we just store the detail link for now.
-                        
-                        doc = {
-                            "reference": ref_number,
-                            "title": title,
-                            "publication_date": self.parse_date(date_col),
-                            "category": dept_col,
-                            "pdf_url": pdf_url, # Might be a detail page url
-                            "detail_url": detail_url
-                        }
-                        
-                        scraped_data.append(doc)
-            
-            logger.info(f"Successfully scraped {len(scraped_data)} circulars.")
-            return scraped_data
+            html = self._fetch_entrylist()
+            soup = BeautifulSoup(html, "lxml")
+
+            circulars = []
+            current_date = None
+
+            for tag in soup.find_all(["h3", "h4", "ul"]):
+                if tag.name == "h3":
+                    # Date header
+                    current_date = self.parse_date(tag.text.strip())
+
+                elif tag.name == "h4" and tag.text.strip().lower() == "circulars":
+                    # Found a Circulars section — grab the next <ul>
+                    ul = tag.find_next_sibling("ul")
+                    if ul and current_date:
+                        for li in ul.find_all("li"):
+                            a = li.find("a")
+                            if not a:
+                                continue
+
+                            title = a.text.strip()
+                            detail_url = a.get("href", "")
+
+                            # Build a clean, stable reference ID from the URL
+                            ref_number = self._build_reference(detail_url, current_date)
+
+                            circulars.append(
+                                {
+                                    "reference": ref_number,
+                                    "title": title,
+                                    "publication_date": current_date,
+                                    "category": "Circulars",
+                                    "pdf_url": detail_url,
+                                    "detail_url": detail_url,
+                                }
+                            )
+
+            logger.info(f"Successfully scraped {len(circulars)} circulars.")
+            return circulars
 
         except Exception as e:
             logger.error(f"Failed to scrape SEBI circulars: {e}", exc_info=True)
             return []
 
+
 if __name__ == "__main__":
-    # Simple manual test
     logging.basicConfig(level=logging.INFO)
     scraper = SEBIScraper()
     docs = scraper.scrape()
-    for d in docs[:3]:
-        print(d)
+    if docs:
+        print(f"\nFound {len(docs)} circulars:\n")
+        for d in docs:
+            print(f"  [{d['publication_date']}] {d['title']}")
+            print(f"   URL: {d['detail_url']}")
+            print()
+    else:
+        print("No circulars scraped.")

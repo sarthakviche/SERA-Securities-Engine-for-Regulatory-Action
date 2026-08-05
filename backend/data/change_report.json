@@ -1,11 +1,51 @@
 {
-  "timestamp": "2026-08-05T14:21:45.083497",
-  "new_documents": [],
+  "timestamp": "2026-08-05T18:24:32.549432",
+  "new_documents": [
+    {
+      "document_id": "SEBI-CIRC-2026-08-03-103314",
+      "title": "Extension of timeline for enrolment with PaRRVA as specified in SEBI Circular No. HO/38/14/(4)2026-MIRSD-POD/I/10557/2026 dated April 29, 2026",
+      "category": "Circulars",
+      "publication_date": "2026-08-03",
+      "status": "new",
+      "pdf_url": "https://www.sebi.gov.in/legal/circulars/aug-2026/extension-of-timeline-for-enrolment-with-parrva-as-specified-in-sebi-circular-no-ho-38-14-4-2026-mirsd-pod-i-10557-2026-dated-april-29-2026_103314.html",
+      "detail_url": "https://www.sebi.gov.in/legal/circulars/aug-2026/extension-of-timeline-for-enrolment-with-parrva-as-specified-in-sebi-circular-no-ho-38-14-4-2026-mirsd-pod-i-10557-2026-dated-april-29-2026_103314.html",
+      "local_pdf_path": "D:\\SERA\\sera\\backend\\downloads\\SEBI-CIRC-2026-08-03-103314.pdf"
+    },
+    {
+      "document_id": "SEBI-CIRC-2026-07-31-103277",
+      "title": "Extension of timelines with repect to compliance of Digital Accessibility Circulars.",
+      "category": "Circulars",
+      "publication_date": "2026-07-31",
+      "status": "new",
+      "pdf_url": "https://www.sebi.gov.in/legal/circulars/jul-2026/extension-of-timelines-with-repect-to-compliance-of-digital-accessibility-circulars-_103277.html",
+      "detail_url": "https://www.sebi.gov.in/legal/circulars/jul-2026/extension-of-timelines-with-repect-to-compliance-of-digital-accessibility-circulars-_103277.html",
+      "local_pdf_path": "D:\\SERA\\sera\\backend\\downloads\\SEBI-CIRC-2026-07-31-103277.pdf"
+    }
+  ],
   "updated_documents": [],
   "superseded_documents": [],
   "removed_documents": [],
-  "downloaded_documents": [],
-  "errors": [
-    "Scraper returned no data"
-  ]
+  "downloaded_documents": [
+    {
+      "document_id": "SEBI-CIRC-2026-08-03-103314",
+      "title": "Extension of timeline for enrolment with PaRRVA as specified in SEBI Circular No. HO/38/14/(4)2026-MIRSD-POD/I/10557/2026 dated April 29, 2026",
+      "category": "Circulars",
+      "publication_date": "2026-08-03",
+      "status": "new",
+      "pdf_url": "https://www.sebi.gov.in/legal/circulars/aug-2026/extension-of-timeline-for-enrolment-with-parrva-as-specified-in-sebi-circular-no-ho-38-14-4-2026-mirsd-pod-i-10557-2026-dated-april-29-2026_103314.html",
+      "detail_url": "https://www.sebi.gov.in/legal/circulars/aug-2026/extension-of-timeline-for-enrolment-with-parrva-as-specified-in-sebi-circular-no-ho-38-14-4-2026-mirsd-pod-i-10557-2026-dated-april-29-2026_103314.html",
+      "local_pdf_path": "D:\\SERA\\sera\\backend\\downloads\\SEBI-CIRC-2026-08-03-103314.pdf"
+    },
+    {
+      "document_id": "SEBI-CIRC-2026-07-31-103277",
+      "title": "Extension of timelines with repect to compliance of Digital Accessibility Circulars.",
+      "category": "Circulars",
+      "publication_date": "2026-07-31",
+      "status": "new",
+      "pdf_url": "https://www.sebi.gov.in/legal/circulars/jul-2026/extension-of-timelines-with-repect-to-compliance-of-digital-accessibility-circulars-_103277.html",
+      "detail_url": "https://www.sebi.gov.in/legal/circulars/jul-2026/extension-of-timelines-with-repect-to-compliance-of-digital-accessibility-circulars-_103277.html",
+      "local_pdf_path": "D:\\SERA\\sera\\backend\\downloads\\SEBI-CIRC-2026-07-31-103277.pdf"
+    }
+  ],
+  "errors": []
 }

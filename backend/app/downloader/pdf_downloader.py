@@ -19,28 +19,53 @@ class PDFDownloader:
         }
 
     def _sanitize_filename(self, reference: str) -> str:
-        """Sanitizes the reference number to be used as a filename."""
-        # Replace non-alphanumeric characters (except dashes and underscores) with underscores
-        safe_name = re.sub(r'[^a-zA-Z0-9\-_]', '_', reference)
+        """
+        Converts a reference like 'SEBI-CIRC-2026-08-03-103314' into a safe
+        filename: 'SEBI-CIRC-2026-08-03-103314.pdf'
+        Strips any characters that are not alphanumeric or hyphens.
+        """
+        safe_name = re.sub(r"[^a-zA-Z0-9\-]", "-", reference)
+        # Collapse multiple consecutive hyphens
+        safe_name = re.sub(r"-{2,}", "-", safe_name).strip("-")
         return f"{safe_name}.pdf"
 
     def _extract_pdf_url_from_detail_page(self, detail_url: str) -> str | None:
         """
-        Often SEBI circular links point to a detail HTML page which then links to the actual PDF.
-        This function fetches the detail page and tries to find the PDF link.
+        SEBI circular detail pages embed the PDF inside an <iframe>, not as a
+        direct <a href> link. This function fetches the detail page and checks:
+          1. <iframe src="...?file=https://...sebi_data/...pdf"> (primary pattern)
+          2. <a href="...pdf"> links (fallback for older pages)
+        Returns the absolute PDF URL if found, else None.
         """
         try:
             response = requests.get(detail_url, headers=self.headers, timeout=self.timeout)
             response.raise_for_status()
-            
+
             soup = BeautifulSoup(response.text, "lxml")
-            
-            # Look for links ending in .pdf or containing 'pdf' in text/class
+
+            # Primary: SEBI embeds PDFs in an iframe whose src contains a ?file= param
+            # e.g. src="../../../web/?file=https://www.sebi.gov.in/sebi_data/attachdocs/aug-2026/xyz.pdf"
+            for iframe in soup.find_all("iframe", src=True):
+                src = iframe["src"]
+                # Extract the ?file= value which is the real PDF URL
+                if "sebi_data" in src and ".pdf" in src.lower():
+                    # The URL is everything after "?file="
+                    if "?file=" in src:
+                        pdf_url = src.split("?file=")[-1]
+                    else:
+                        # Could be a direct iframe src pointing at the PDF
+                        pdf_url = urljoin(detail_url, src)
+                    logger.info(f"Found PDF via iframe: {pdf_url}")
+                    return pdf_url
+
+            # Fallback: look for <a href="...pdf"> links (older SEBI pages)
             for a_tag in soup.find_all("a", href=True):
                 href = a_tag["href"]
                 if href.lower().endswith(".pdf"):
-                    return urljoin(detail_url, href)
-                    
+                    pdf_url = urljoin(detail_url, href)
+                    logger.info(f"Found PDF via anchor link: {pdf_url}")
+                    return pdf_url
+
             logger.warning(f"Could not find PDF link on detail page: {detail_url}")
             return None
         except Exception as e:
