@@ -15,6 +15,8 @@ export type DemoStage =
 export interface DemoContextType {
   demoStage: DemoStage;
   setDemoStage: (stage: DemoStage) => void;
+  workflowId: string | null;
+  setWorkflowId: (id: string | null) => void;
   resetDemo: () => void;
   advanceDemo: () => void;
   isDemoActive: boolean;
@@ -87,13 +89,14 @@ import {
 
 export function DemoProvider({ children }: { children: ReactNode }) {
   const [demoStage, setDemoStageState] = useState<DemoStage>("OFF");
+  const [workflowId, setWorkflowIdState] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("sera-demo-stage") as DemoStage | null;
-      if (stored) {
-        setDemoStageState(stored);
-      }
+      const storedStage = localStorage.getItem("sera-demo-stage") as DemoStage | null;
+      if (storedStage) setDemoStageState(storedStage);
+      const storedWfId = localStorage.getItem("sera-workflow-id");
+      if (storedWfId) setWorkflowIdState(storedWfId);
     }
   }, []);
 
@@ -102,8 +105,18 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("sera-demo-stage", stage);
   };
 
+  const setWorkflowId = (id: string | null) => {
+    setWorkflowIdState(id);
+    if (id) {
+      localStorage.setItem("sera-workflow-id", id);
+    } else {
+      localStorage.removeItem("sera-workflow-id");
+    }
+  };
+
   const resetDemo = () => {
     setDemoStage("OFF");
+    setWorkflowId(null);
   };
 
   const advanceDemo = () => {
@@ -565,6 +578,8 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       value={{
         demoStage,
         setDemoStage,
+        workflowId,
+        setWorkflowId,
         resetDemo,
         advanceDemo,
         isDemoActive,

@@ -3,14 +3,12 @@ from typing import List, Dict, Any
 import os
 
 from app.modules.documents.schemas import CircularResponse, ChangeReport, DownloadInfo
-from app.modules.documents.repository import DocumentRepository
-from app.modules.documents.service import DocumentService
+from app.modules.documents.repository import document_repository as repo
+from app.modules.documents.service import document_service as service
 from app.core.config import settings
 from app.workers import monitor
 
 router = APIRouter(prefix="/api", tags=["documents"])
-repo = DocumentRepository()
-service = DocumentService()
 
 @router.get("/circulars", response_model=List[CircularResponse])
 async def get_circulars():

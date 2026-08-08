@@ -8,21 +8,13 @@ from app.ai.agents.extraction.schemas import SemanticObject
 from app.ai.agents.applicability.schemas import ApplicabilityOutput
 from app.ai.agents.ambiguity.schemas import AmbiguityOutput
 from app.ai.agents.obligation.schemas import ObligationOutput, ExtractedObligation
+from .prompts import SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
 class ObligationAgent:
     def __init__(self):
-        self.system_prompt = (
-            "You are a strict regulatory compliance parser. Your task is to extract and normalize "
-            "actionable regulatory obligations from the provided semantic objects. "
-            "Only process objects that are deemed applicable based on the applicability assessment. "
-            "For each obligation, provide a clear title, category, text, and regulatory reference. "
-            "IMPORTANT RULES:\n"
-            "1. NEVER invent a deadline, owner, or evidence requirement. If it is not explicitly stated in the text, leave it null.\n"
-            "2. Ensure the obligation is strictly derived from the provided regulatory text.\n"
-            "3. Do not hallucinate obligations that do not exist."
-        )
+        self.system_prompt = SYSTEM_PROMPT
 
     async def extract_obligations(self, semantic_objects: List[SemanticObject], applicability: ApplicabilityOutput, ambiguity: AmbiguityOutput) -> ObligationOutput:
         # Filter objects that are actually applicable to reduce prompt size and hallucination risk

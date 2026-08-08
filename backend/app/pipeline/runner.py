@@ -65,6 +65,19 @@ async def run_pipeline(job_id: str, document_id: str):
         async with AsyncSessionLocal() as db:
             try:
                 await workflow_service.save_pipeline_results(db, document_id, results)
+                await workflow_service.seed_swd_from_pipeline_results(db, document_id, results)
+                
+                try:
+                    doc_uuid = uuid.UUID(document_id)
+                except ValueError:
+                    doc_uuid = uuid.uuid5(uuid.NAMESPACE_URL, document_id)
+                from app.modules.workflow.repository import workflow_repository
+                workflow = await workflow_repository.get_or_create_workflow(db, doc_uuid)
+                
+                await workflow_repository.update_workflow_stage(
+                    db, workflow_id=workflow.id, status="pending_approval_1", stage="gate_1"
+                )
+                
                 await db.commit()
             except Exception as e:
                 await db.rollback()

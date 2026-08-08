@@ -4,59 +4,86 @@ import { PageHeader } from "@/components/sera/page-header";
 import { StatusPill } from "@/components/sera/status-pill";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Lock, Loader2, Plus, Download, ArrowRight, Network } from "lucide-react";
+import { CheckCircle2, Lock, Loader2, Plus, Download, ArrowRight } from "lucide-react";
 import { useDemo } from "@/lib/demo";
 import { toast } from "sonner";
+import { useWorkflow } from "@/hooks/useWorkflow";
+import { api } from "@/lib/api";
+import { useEffect, useState } from "react";
+import { AgentStatusBanner } from "@/components/sera/agent-status-banner";
+import { ImpactGraph, ImpactNode } from "@/components/sera/impact-graph";
 
 export const Route = createFileRoute("/impact-map")({
   head: () => ({ meta: [{ title: "Impact Map · SERA" }] }),
   component: ImpactMap,
 });
 
-const COLUMNS = [
-  { key: "clause", label: "Clause" },
-  { key: "obligation", label: "Obligation" },
-  { key: "process", label: "Process" },
-  { key: "system", label: "Systems" },
-  { key: "department", label: "Department" },
-  { key: "owner", label: "Owner" },
-  { key: "evidence", label: "Evidence" },
-];
-
 // Fictional SEBI scenario nodes
 const demoNodes = [
-  { col: "clause", code: "CLAUSE 2", title: "12M Re-verification Mandate", tone: "brand" as const, highlight: true },
-  { col: "obligation", code: "OB-MIRSD-104", title: "Periodic Mobile Re-verification", tone: "neutral" as const },
-  { col: "process", code: "PROC-KYC-01", title: "Periodic KYC Profile Maintenance", tone: "neutral" as const },
-  { col: "system", code: "SYS-CRM", title: "CRM Client Records", tone: "neutral" as const },
-  { col: "system", code: "SYS-APP", title: "Mobile Client App", tone: "neutral" as const },
-  { col: "system", code: "SYS-SMS", title: "SMS Gateway Service", tone: "neutral" as const },
-  { col: "department", code: "", title: "IT Infrastructure", tone: "neutral" as const },
-  { col: "department", code: "", title: "Operations Queue", tone: "neutral" as const },
-  { col: "owner", code: "", title: "Sarah Miller (Ops)", tone: "neutral" as const },
-  { col: "owner", code: "", title: "IT Admin Team (IT)", tone: "neutral" as const },
-  { col: "evidence", code: "DOC-SOP-104", title: "Client Verification SOP v2.0", tone: "neutral" as const },
-  { col: "evidence", code: "LOG-OTP", title: "SMS OTP Verification Logs", tone: "neutral" as const },
+  { col: "clause", code: "CLAUSE 2", title: "12M Re-verification Mandate", highlight: true },
+  { col: "obligation", code: "OB-MIRSD-104", title: "Periodic Mobile Re-verification" },
+  { col: "process", code: "PROC-KYC-01", title: "Periodic KYC Profile Maintenance" },
+  { col: "system", code: "SYS-CRM", title: "CRM Client Records" },
+  { col: "system", code: "SYS-APP", title: "Mobile Client App" },
+  { col: "system", code: "SYS-SMS", title: "SMS Gateway Service" },
+  { col: "department", code: "", title: "IT Infrastructure" },
+  { col: "department", code: "", title: "Operations Queue" },
+  { col: "owner", code: "", title: "Sarah Miller (Ops)" },
+  { col: "owner", code: "", title: "IT Admin Team (IT)" },
+  { col: "evidence", code: "DOC-SOP-104", title: "Client Verification SOP v2.0" },
+  { col: "evidence", code: "LOG-OTP", title: "SMS OTP Verification Logs" },
 ];
 
 // Baseline DORA nodes
 const defaultNodes = [
-  { col: "clause", code: "ART 17.1", title: "Risk Assessment Strategy", tone: "brand" as const, highlight: true },
-  { col: "obligation", code: "OB-042", title: "Annual Third-Party Audit", tone: "neutral" as const },
-  { col: "obligation", code: "OB-043", title: "Contractual Clause Rev.", tone: "neutral" as const },
-  { col: "process", code: "PROC-VND-01", title: "Vendor Onboarding", tone: "neutral" as const },
-  { col: "system", code: "SYS-GRC", title: "Archer GRC Platform", tone: "neutral" as const },
-  { col: "system", code: "SYS-ERP", title: "SAP Vendor Portal", tone: "neutral" as const },
-  { col: "department", code: "", title: "Procurement", tone: "neutral" as const },
-  { col: "department", code: "", title: "Risk & Compliance", tone: "neutral" as const },
-  { col: "owner", code: "", title: "Sarah Jenkins", tone: "neutral" as const },
-  { col: "owner", code: "", title: "Mark Thorogood", tone: "neutral" as const },
-  { col: "evidence", code: "DOC-AUDIT-23", title: "Annual Report 2023", tone: "neutral" as const },
+  { col: "clause", code: "ART 17.1", title: "Risk Assessment Strategy", highlight: true },
+  { col: "obligation", code: "OB-042", title: "Annual Third-Party Audit" },
+  { col: "obligation", code: "OB-043", title: "Contractual Clause Rev." },
+  { col: "process", code: "PROC-VND-01", title: "Vendor Onboarding" },
+  { col: "system", code: "SYS-GRC", title: "Archer GRC Platform" },
+  { col: "system", code: "SYS-ERP", title: "SAP Vendor Portal" },
+  { col: "department", code: "", title: "Procurement" },
+  { col: "department", code: "", title: "Risk & Compliance" },
+  { col: "owner", code: "", title: "Sarah Jenkins" },
+  { col: "owner", code: "", title: "Mark Thorogood" },
+  { col: "evidence", code: "DOC-AUDIT-23", title: "Annual Report 2023" },
 ];
 
 function ImpactMap() {
-  const { demoStage, setDemoStage, isDemoActive } = useDemo();
+  const { demoStage, setDemoStage, isDemoActive, workflowId } = useDemo();
   const navigate = useNavigate();
+  const { data: workflowStatus } = useWorkflow(workflowId);
+  const [realNodes, setRealNodes] = useState<ImpactNode[] | null>(null);
+
+  useEffect(() => {
+    // If agent is done mapping, fetch its output
+    if (workflowId && workflowStatus && workflowStatus.current_stage !== "impact_mapping") {
+      api.getAgentOutput(workflowId, "impact_mapping_agent")
+        .then((output) => {
+          if (output && output.mappings) {
+            const nodes: ImpactNode[] = [];
+            // Parse real output into nodes
+            // Assume single clause for now (TODO: get from document metadata)
+            nodes.push({ col: "clause", code: "CLAUSE", title: "Re-verification Mandate", highlight: true });
+            
+            output.mappings.forEach((m: any) => {
+              nodes.push({ col: "obligation", code: m.obligation_id?.substring(0, 8), title: "Mapped Obligation" });
+              m.affected_departments?.forEach((d: any) => {
+                nodes.push({ col: "department", title: d.department_name_suggested });
+              });
+              m.affected_systems?.forEach((s: any) => {
+                nodes.push({ col: "system", title: s.system_name });
+              });
+              if (m.evidence_required) {
+                 nodes.push({ col: "evidence", title: m.evidence_required.substring(0,30) + "..." });
+              }
+            });
+            setRealNodes(nodes);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [workflowId, workflowStatus]);
 
   const handleConfirmMapping = () => {
     setDemoStage("IMPACT_MAPPED");
@@ -66,7 +93,8 @@ function ImpactMap() {
     navigate({ to: "/implementation-plan" });
   };
 
-  const currentNodes = isDemoActive ? demoNodes : defaultNodes;
+  const isMapping = workflowStatus?.current_stage === "impact_mapping";
+  const currentNodes = realNodes || (isDemoActive ? demoNodes : defaultNodes);
 
   return (
     <AppShell>
@@ -85,7 +113,7 @@ function ImpactMap() {
         }
         actions={
           <>
-            {isDemoActive && (
+            {isDemoActive && !workflowId && (
               <span className="mr-2 inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400 border border-amber-500/20">
                 Demo Scenario Map
               </span>
@@ -100,50 +128,23 @@ function ImpactMap() {
         }
       />
 
+      {isMapping && (
+        <AgentStatusBanner
+          icon={<Loader2 className="animate-spin" />}
+          message="SERA is mapping obligations to departments and systems..."
+          subtext="This usually takes under 30 seconds."
+        />
+      )}
+
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         {/* Node graph mapping visualization */}
-        <Card className="overflow-hidden rounded-2xl p-6 bg-card border-border">
-          <div
-            className="relative rounded-xl border border-dashed border-border bg-surface-2/40 p-6 overflow-x-auto min-w-[800px]"
-            style={{
-              backgroundImage:
-                "radial-gradient(oklch(from var(--color-border) l c h / 60%) 1px, transparent 1px)",
-              backgroundSize: "16px 16px",
-            }}
-          >
-            <div className="grid grid-cols-7 gap-4 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground select-none pb-2 border-b border-border mb-4">
-              {COLUMNS.map((c) => (
-                <div key={c.key}>{c.label}</div>
-              ))}
+        <div className="relative">
+          <ImpactGraph nodes={currentNodes} />
+          {isMapping && (
+            <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px] rounded-2xl flex items-center justify-center">
             </div>
-            <div className="grid grid-cols-7 gap-4 relative">
-              {COLUMNS.map((c) => (
-                <div key={c.key} className="flex flex-col gap-3 z-10">
-                  {currentNodes
-                    .filter((n) => n.col === c.key)
-                    .map((n, i) => (
-                      <div
-                        key={i}
-                        className={
-                          "rounded-lg border bg-card p-2.5 text-xs shadow-sm transition " +
-                          (n.highlight
-                            ? "border-primary ring-2 ring-primary/20"
-                            : "border-border hover:border-primary/40 hover:shadow-sm")
-                        }
-                      >
-                        {n.code && (
-                          <div className="mb-1 text-[9px] font-bold text-muted-foreground font-mono">
-                            {n.code}
-                          </div>
-                        )}
-                        <div className="font-semibold leading-tight text-foreground">{n.title}</div>
-                      </div>
-                    ))}
-                </div>
-              ))}
-            </div>
-          </div>
-        </Card>
+          )}
+        </div>
 
         {/* Dynamic Sidebar based on active stage */}
         <aside className="space-y-4">
@@ -188,12 +189,14 @@ function ImpactMap() {
             <div className="mt-4">
               <div className="mb-1 flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">Mapping Completeness</span>
-                <span className="font-semibold text-primary">100%</span>
+                <span className="font-semibold text-primary">{isMapping ? "0%" : "100%"}</span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                <div className="h-full bg-primary" style={{ width: "100%" }} />
+                <div className="h-full bg-primary transition-all duration-1000" style={{ width: isMapping ? "0%" : "100%" }} />
               </div>
-              <div className="mt-1 text-[10px] text-muted-foreground">All nodes mapped & verified</div>
+              <div className="mt-1 text-[10px] text-muted-foreground">
+                {isMapping ? "AI Agent is determining impacts..." : "All nodes mapped & verified"}
+              </div>
             </div>
           </Card>
 
@@ -201,7 +204,7 @@ function ImpactMap() {
             <div className="text-base font-semibold text-foreground border-b border-border pb-3 mb-3">
               Propagation Rationale
             </div>
-            {isDemoActive ? (
+            {isDemoActive && !isMapping ? (
               <ol className="space-y-4 border-l border-border pl-5 relative text-xs leading-relaxed">
                 <PathStep
                   icon={<CheckCircle2 className="h-3.5 w-3.5" />}
@@ -226,6 +229,15 @@ function ImpactMap() {
                   tone="done"
                   title="Process &rarr; SOP & Evidence"
                   detail="Requires amending client KYC SOP and storing verification logs as compliance proof."
+                />
+              </ol>
+            ) : isMapping ? (
+              <ol className="space-y-4 border-l border-border pl-5 relative text-xs leading-relaxed opacity-50">
+                <PathStep
+                  icon={<Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  tone="active"
+                  title="Analyzing Propagation..."
+                  detail="Agent is tracing obligation impacts."
                 />
               </ol>
             ) : (
@@ -259,12 +271,13 @@ function ImpactMap() {
 
             {isDemoActive && (
               <div className="mt-5 border-t border-border pt-4">
-                {demoStage === "INTERPRETATION_APPROVED" ? (
+                {demoStage === "INTERPRETATION_APPROVED" || isMapping ? (
                   <Button
+                    disabled={isMapping}
                     onClick={handleConfirmMapping}
                     className="w-full gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white border-none cursor-pointer text-xs"
                   >
-                    Confirm Impact Mapping <ArrowRight className="h-3.5 w-3.5" />
+                    {isMapping ? "AI is Mapping..." : "Confirm Impact Mapping"} <ArrowRight className="h-3.5 w-3.5" />
                   </Button>
                 ) : (
                   <Link

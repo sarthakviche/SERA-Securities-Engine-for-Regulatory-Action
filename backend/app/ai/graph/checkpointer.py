@@ -10,8 +10,8 @@ of this slice's adapters.
 
 from __future__ import annotations
 
-from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from app.core.config import settings
 
-
-def get_checkpointer() -> MemorySaver:
-    return MemorySaver()
+def get_checkpointer() -> AsyncPostgresSaver:
+    return AsyncPostgresSaver.from_conn_string(settings.DATABASE_URL)

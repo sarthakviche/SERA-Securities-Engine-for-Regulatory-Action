@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str = Field(default="")
     anthropic_model: str = Field(default="claude-sonnet-5")
 
+    # Placeholder organization ID for single-tenant mode
+    ORG_ID_DEFAULT: str = Field(default="00000000-0000-0000-0000-000000000001")
+
     # Backend selector for this slice's swappable fakes (see ai/graph/deps.py).
     # "memory" (default, prototype) -> in-memory fakes.
     # "postgres" -> real implementations; not wired up yet, reserved for teammates.

@@ -6,18 +6,13 @@ from pathlib import Path
 from app.ai.llm_client import llm_client
 from app.ai.agents.extraction.schemas import SemanticObject
 from app.ai.agents.applicability.schemas import ApplicabilityOutput, ObjectApplicability
+from .prompts import SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
 class ApplicabilityAgent:
     def __init__(self):
-        self.system_prompt = (
-            "You are a regulatory compliance expert. Your task is to determine if the provided "
-            "semantic regulatory objects apply to a specific target organization. "
-            "The target organization is an 'Investment Adviser (IA) / Research Analyst (RA)'. "
-            "Evaluate each semantic object carefully against this organization profile. "
-            "Return a structured applicability assessment."
-        )
+        self.system_prompt = SYSTEM_PROMPT
 
     async def assess_applicability(self, semantic_objects: List[SemanticObject]) -> ApplicabilityOutput:
         objects_json = json.dumps([obj.model_dump() for obj in semantic_objects], indent=2)

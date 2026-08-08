@@ -15,7 +15,14 @@ logger = setup_logging()
 async def lifespan(app: FastAPI):
     # Startup
     logger.info(f"Starting up {settings.APP_NAME}")
-    # Optional: We could trigger an initial background scrape here
+    # Initialize LangGraph Postgres Checkpointer tables
+    try:
+        from app.ai.graph.checkpointer import get_checkpointer
+        checkpointer = get_checkpointer()
+        await checkpointer.setup()
+        logger.info("LangGraph checkpointer tables ready.")
+    except Exception as e:
+        logger.warning(f"Checkpointer setup skipped (no DB?): {e}")
     yield
     # Shutdown
     logger.info(f"Shutting down {settings.APP_NAME}")
@@ -40,6 +47,9 @@ def create_app() -> FastAPI:
     # Register routers
     app.include_router(documents_router)
     app.include_router(pipeline_router)
+    
+    from app.modules.workflow.router import router as workflow_router
+    app.include_router(workflow_router)
     
     @app.get("/")
     async def root():

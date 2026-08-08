@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.adapters.memory.store import InMemoryOrgStore
 from app.ai.providers.llm_provider import AnthropicLLMProvider, LLMProvider
 from app.core.config import Settings, get_settings
@@ -29,12 +31,12 @@ from app.modules.knowledge.retrieval_provider import InMemoryRetrievalProvider, 
 from app.modules.obligations.repository import InMemoryObligationRepository, ObligationRepository
 from app.modules.tasks.repository import InMemoryTaskRepository, TaskRepository
 from app.modules.workflow.repository import InMemoryWorkflowRepository, WorkflowRepository
-from app.modules.workflow.service import WorkflowService
+from app.modules.workflow.service import AgentWorkflowService
 
 
 @dataclass
 class NodeDeps:
-    workflow_service: WorkflowService
+    workflow_service: AgentWorkflowService
     organizational_repo: OrganizationalRepository
     obligation_repo: ObligationRepository
     task_repo: TaskRepository
@@ -48,15 +50,22 @@ class NodeDeps:
 def build_deps(
     *,
     store: InMemoryOrgStore,
+    db_session: AsyncSession | None = None,
     workflow_repository: WorkflowRepository | None = None,
     event_publisher: EventPublisher | None = None,
     llm_provider: LLMProvider | None = None,
     settings: Settings | None = None,
 ) -> NodeDeps:
     settings = settings or get_settings()
-    workflow_repository = workflow_repository or InMemoryWorkflowRepository()
+    
+    if db_session:
+        from app.modules.workflow.repository_sql import SQLAlchemyWorkflowRepository
+        workflow_repository = SQLAlchemyWorkflowRepository(db_session)
+    else:
+        workflow_repository = workflow_repository or InMemoryWorkflowRepository()
+        
     return NodeDeps(
-        workflow_service=WorkflowService(workflow_repository),
+        workflow_service=AgentWorkflowService(workflow_repository),
         organizational_repo=InMemoryOrganizationalRepository(store),
         obligation_repo=InMemoryObligationRepository(store),
         task_repo=InMemoryTaskRepository(store),

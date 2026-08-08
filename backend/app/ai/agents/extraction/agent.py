@@ -5,18 +5,13 @@ from pathlib import Path
 
 from app.ai.llm_client import llm_client
 from app.ai.agents.extraction.schemas import ExtractionOutput, SemanticObject
+from .prompts import SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
 class ExtractionAgent:
     def __init__(self):
-        self.system_prompt = (
-            "You are a regulatory compliance expert. Your task is to extract semantic objects "
-            "from the provided regulatory text batch. A semantic object can be an 'obligation', "
-            "'definition', 'date', or 'exemption'. "
-            "Ensure you extract the core requirements faithfully from the text. "
-            "Do NOT hallucinate or invent obligations that are not present in the text."
-        )
+        self.system_prompt = SYSTEM_PROMPT
 
     async def extract_batch(self, batch_text: str) -> List[SemanticObject]:
         user_prompt = f"Extract the semantic objects from the following regulatory text:\n\n{batch_text}"

@@ -32,6 +32,7 @@ import { useDemo } from "@/lib/demo";
 import { formatDateTime, relative } from "@/lib/format";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -65,6 +66,7 @@ function Dashboard() {
   const {
     demoStage,
     setDemoStage,
+    setWorkflowId,
     resetDemo,
     circulars,
     pipelineCounts,
@@ -101,10 +103,18 @@ function Dashboard() {
     }
   }, [isSimulating, simStep, setDemoStage, navigate]);
 
-  const handleBeginWorkflow = () => {
+  const handleBeginWorkflow = async () => {
     setIsSimulating(true);
     setSimStep(0);
     setDemoStage("DETECTED");
+
+    try {
+      const wf = await api.createWorkflow("SEBI/HO/MIRSD/2026/104");
+      setWorkflowId(wf.id || wf.workflow_id);
+    } catch (e) {
+      console.error("Failed to create workflow:", e);
+      toast.error("Failed to initialize backend workflow.");
+    }
   };
 
   const handleReset = () => {

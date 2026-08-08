@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { ShieldCheck, AlertTriangle, Flag, ArrowRight, Check, X, Edit3 } from "lucide-react";
 import { useDemo } from "@/lib/demo";
 import { toast } from "sonner";
+import { useState } from "react";
+import { api } from "@/lib/api";
+import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/workspace")({
   head: () => ({ meta: [{ title: "Regulatory Workspace · SERA" }] }),
@@ -14,15 +17,33 @@ export const Route = createFileRoute("/workspace")({
 });
 
 function Workspace() {
-  const { demoStage, setDemoStage, isDemoActive } = useDemo();
+  const { demoStage, setDemoStage, isDemoActive, workflowId } = useDemo();
   const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleApproveInterpretation = () => {
-    setDemoStage("INTERPRETATION_APPROVED");
-    toast.success("AI Interpretation Approved", {
-      description: "Obligation OB-MIRSD-104 has been created and marked as Approved.",
-    });
-    navigate({ to: "/obligations" });
+  const handleApproveInterpretation = async () => {
+    if (!workflowId) {
+      setDemoStage("INTERPRETATION_APPROVED");
+      toast.success("AI Interpretation Approved", {
+        description: "Obligation OB-MIRSD-104 has been created and marked as Approved.",
+      });
+      navigate({ to: "/obligations" });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      await api.submitGate(workflowId, "gate_1", "approved");
+      setDemoStage("INTERPRETATION_APPROVED");
+      toast.success("Impact Mapping Initiated", {
+        description: "AI agents are now mapping obligations to departments and systems.",
+      });
+      navigate({ to: "/impact-map" });
+    } catch (e) {
+      toast.error("Failed to submit approval. Please retry.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Render the Demo Workspace if demo mode is active
@@ -46,8 +67,9 @@ function Workspace() {
                 Illustrative Demo Scenario
               </span>
               <Button variant="outline">Compare Versions</Button>
-              <Button onClick={handleApproveInterpretation} className="gap-2 bg-primary hover:bg-primary/95 text-primary-foreground cursor-pointer">
-                <ShieldCheck className="h-4 w-4" /> Approve Interpretation
+              <Button onClick={handleApproveInterpretation} disabled={isSubmitting} className="gap-2 bg-primary hover:bg-primary/95 text-primary-foreground cursor-pointer">
+                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />} 
+                {isSubmitting ? "Approving..." : "Approve Interpretation"}
               </Button>
             </>
           }
@@ -206,8 +228,9 @@ function Workspace() {
                 <Button variant="outline" size="sm" className="text-xs cursor-pointer">
                   <Edit3 className="h-3.5 w-3.5 mr-1" /> Edit
                 </Button>
-                <Button onClick={handleApproveInterpretation} size="sm" className="text-xs bg-primary hover:bg-primary/95 text-primary-foreground cursor-pointer col-span-1">
-                  <Check className="h-3.5 w-3.5 mr-1" /> Approve
+                <Button onClick={handleApproveInterpretation} disabled={isSubmitting} size="sm" className="text-xs bg-primary hover:bg-primary/95 text-primary-foreground cursor-pointer col-span-1">
+                  {isSubmitting ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1" />}
+                  {isSubmitting ? "Approving..." : "Approve"}
                 </Button>
               </div>
             </Card>

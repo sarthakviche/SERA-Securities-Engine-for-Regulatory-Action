@@ -7,19 +7,13 @@ from app.ai.llm_client import llm_client
 from app.ai.agents.extraction.schemas import SemanticObject
 from app.ai.agents.applicability.schemas import ApplicabilityOutput
 from app.ai.agents.ambiguity.schemas import AmbiguityOutput, ObjectAmbiguity
+from .prompts import SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
 class AmbiguityAgent:
     def __init__(self):
-        self.system_prompt = (
-            "You are a regulatory compliance expert analyzing regulatory text for ambiguity. "
-            "Your task is to review the provided semantic objects and their applicability assessment, "
-            "and identify any ambiguities. Consider issues such as unclear wording, undefined terms, "
-            "unclear scope, conflicting interpretations, unclear responsibility, or unclear deadlines. "
-            "If there is no ambiguity, explicitly state that it is clear and explain why. "
-            "Base your assessment strictly on the provided regulatory text and context. Do not invent information."
-        )
+        self.system_prompt = SYSTEM_PROMPT
 
     async def detect_ambiguity(self, semantic_objects: List[SemanticObject], applicability: ApplicabilityOutput) -> AmbiguityOutput:
         # We focus primarily on objects that were deemed applicable, but we pass all to maintain context

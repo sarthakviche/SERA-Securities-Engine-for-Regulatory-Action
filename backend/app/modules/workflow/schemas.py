@@ -14,7 +14,7 @@ from enum import Enum
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class WorkflowStatus(str, Enum):
@@ -75,6 +75,8 @@ class AgentTask(BaseModel):
 
 
 class SWDPayload(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     document_metadata: dict[str, Any] = Field(default_factory=dict)
     agent_outputs: dict[str, Any] = Field(default_factory=dict)
     human_approvals: dict[str, GateApproval] = Field(default_factory=dict)
@@ -83,6 +85,8 @@ class SWDPayload(BaseModel):
 
 
 class WorkflowDocument(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     document_id: UUID
     organization_id: UUID

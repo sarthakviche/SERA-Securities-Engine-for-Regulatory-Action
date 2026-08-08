@@ -19,7 +19,6 @@ from sqlalchemy import (
     DateTime,
     Integer,
     ForeignKey,
-    Enum as SAEnum,
     Index,
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
@@ -27,13 +26,6 @@ from sqlalchemy.orm import relationship
 
 from app.core.db import Base
 
-WorkflowStatus = SAEnum(
-    "PENDING",
-    "RUNNING",
-    "COMPLETED",
-    "FAILED",
-    name="workflow_status_enum",
-)
 
 
 class WorkflowDocument(Base):
@@ -56,11 +48,19 @@ class WorkflowDocument(Base):
         comment="FK to regulatory_documents.id",
     )
 
+    # Organization ID (used for tenant isolation)
+    organization_id = Column(
+        UUID(as_uuid=True),
+        nullable=False,
+        default=uuid.uuid4,
+        index=True,
+    )
+
     # Overall pipeline status
     status = Column(
-        WorkflowStatus,
+        String(100),
         nullable=False,
-        default="PENDING",
+        default="created",
         index=True,
     )
 
