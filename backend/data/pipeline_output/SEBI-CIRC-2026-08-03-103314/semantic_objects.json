@@ -1,0 +1,229 @@
+{
+  "document_id": "SEBI-CIRC-2026-08-03-103314",
+  "objects": [
+    {
+      "object_id": "obj_1",
+      "clause_id": null,
+      "type": "obligation",
+      "text": "who wish to communicate certified past performance data to clients (including prospective clients) must enrol with Past Risk and Return Verification Agency",
+      "context": "Clause 1 of SEBI circular no. HO/38/12/11(1)2025-MIRSD-POD/I/73/2025 dated October 30, 2025"
+    },
+    {
+      "object_id": "obj_2",
+      "clause_id": null,
+      "type": "date",
+      "text": "October 30, 2025",
+      "context": "Clause 1 of SEBI circular no. HO/38/12/11(1)2025-MIRSD-POD/I/73/2025"
+    },
+    {
+      "object_id": "obj_3",
+      "clause_id": null,
+      "type": "definition",
+      "text": "Investment Advisers (\u201cIAs\u201d)/ Research Analysts (\u201cRAs\u201d)",
+      "context": "Clause 1 of SEBI circular no. HO/38/12/11(1)2025-MIRSD-POD/I/73/2025 dated October 30, 2025"
+    },
+    {
+      "object_id": "obj_4",
+      "clause_id": "Clause 1",
+      "type": "obligation",
+      "text": "within three months of its operationalization",
+      "context": "SEBI vide circular no. HO/38/12/11(1)2025-MIRSD-POD/I/73/2025 dated October"
+    },
+    {
+      "object_id": "obj_5",
+      "clause_id": "Clause 1",
+      "type": "obligation",
+      "text": "not be able to communicate certified past performance data to clients post three",
+      "context": "SEBI vide circular no. HO/38/12/11(1)2025-MIRSD-POD/I/73/2025 dated October"
+    },
+    {
+      "object_id": "obj_6",
+      "clause_id": "Clause 1",
+      "type": "obligation",
+      "text": "months from the date of operationalization of PaRRVA",
+      "context": "SEBI vide circular no. HO/38/12/11(1)2025-MIRSD-POD/I/73/2025 dated October"
+    },
+    {
+      "object_id": "obj_7",
+      "clause_id": "Clause 2",
+      "type": "obligation",
+      "text": "wish to communicate",
+      "context": "SEBI, vide circular no. HO/38/14/(4)2026-MIRSD-POD/I/10557/2026 dated April 29, 2026"
+    },
+    {
+      "object_id": "obj_8",
+      "clause_id": null,
+      "type": "date",
+      "text": "October",
+      "context": "SEBI vide circular no. HO/38/12/11(1)2025-MIRSD-POD/I/73/2025 dated October"
+    },
+    {
+      "object_id": "obj_9",
+      "clause_id": null,
+      "type": "date",
+      "text": "April 29, 2026",
+      "context": "SEBI, vide circular no. HO/38/14/(4)2026-MIRSD-POD/I/10557/2026 dated April 29, 2026"
+    },
+    {
+      "object_id": "obj_10",
+      "clause_id": null,
+      "type": "definition",
+      "text": "PaRRVA",
+      "context": "SEBI vide circular no. HO/38/12/11(1)2025-MIRSD-POD/I/73/2025 dated October"
+    },
+    {
+      "object_id": "obj_11",
+      "clause_id": "Clause 2",
+      "type": "obligation",
+      "text": "certified past performance data to clients (including prospective clients) must enrol",
+      "context": "SEBI circular no. HO/38/14/(4)2026-MIRSD-POD/I/10557"
+    },
+    {
+      "object_id": "obj_12",
+      "clause_id": "Clause 2",
+      "type": "date",
+      "text": "August 03, 2026",
+      "context": "enrolment deadline for PaRRVA"
+    },
+    {
+      "object_id": "obj_13",
+      "clause_id": "Clause 2",
+      "type": "date",
+      "text": "May 04, 2026",
+      "context": "SEBI circular date"
+    },
+    {
+      "object_id": "obj_14",
+      "clause_id": "Clause 3",
+      "type": "exemption",
+      "text": "extension of aforesaid timeline for enrolment",
+      "context": "PaRRVA representation to SEBI"
+    },
+    {
+      "object_id": "obj_15",
+      "clause_id": "Clause 3",
+      "type": "date",
+      "text": "September 03, 2026",
+      "context": null
+    },
+    {
+      "object_id": "obj_16",
+      "clause_id": "Clause 3",
+      "type": "definition",
+      "text": "framework",
+      "context": null
+    },
+    {
+      "object_id": "obj_17",
+      "clause_id": "Clause 4",
+      "type": "definition",
+      "text": "Chapter IV of the Securities and Exchange Board of India Act, 1992, read with",
+      "context": null
+    },
+    {
+      "object_id": "obj_18",
+      "clause_id": "Clause 4",
+      "type": "definition",
+      "text": "Section 11(1) of",
+      "context": null
+    },
+    {
+      "object_id": "obj_19",
+      "clause_id": "Clause 4",
+      "type": "obligation",
+      "text": "issued in exercise of powers conferred under Section 11(1)",
+      "context": "SEBI (Intermediaries) Regulations, 2008"
+    },
+    {
+      "object_id": "obj_20",
+      "clause_id": "Clause 4",
+      "type": "obligation",
+      "text": "issued in exercise of powers conferred under Section 11(1)",
+      "context": "SEBI (Investment Advisers) Regulations, 2013"
+    },
+    {
+      "object_id": "obj_21",
+      "clause_id": "Clause 4",
+      "type": "obligation",
+      "text": "issued in exercise of powers conferred under Section 11(1)",
+      "context": "SEBI (Research Analysts) Regulations, 2014"
+    },
+    {
+      "object_id": "obj_22",
+      "clause_id": "Clause 4",
+      "type": "definition",
+      "text": "This circular",
+      "context": "SEBI (Intermediaries) Regulations, 2008"
+    },
+    {
+      "object_id": "obj_23",
+      "clause_id": "Clause 4",
+      "type": "definition",
+      "text": "This circular",
+      "context": "SEBI (Investment Advisers) Regulations, 2013"
+    },
+    {
+      "object_id": "obj_24",
+      "clause_id": "Clause 4",
+      "type": "definition",
+      "text": "This circular",
+      "context": "SEBI (Research Analysts) Regulations, 2014"
+    },
+    {
+      "object_id": "obj_25",
+      "clause_id": "Clause 4",
+      "type": "date",
+      "text": "2026",
+      "context": "Regulatory text"
+    },
+    {
+      "object_id": "obj_26",
+      "clause_id": "Clause 4",
+      "type": "exemption",
+      "text": "protect the interests of",
+      "context": "SEBI (Research Analysts) Regulations, 2014"
+    },
+    {
+      "object_id": "obj_27",
+      "clause_id": null,
+      "type": "definition",
+      "text": "securities markets",
+      "context": "Clause 4"
+    },
+    {
+      "object_id": "obj_28",
+      "clause_id": null,
+      "type": "definition",
+      "text": "securities",
+      "context": "Clause 4"
+    },
+    {
+      "object_id": "obj_29",
+      "clause_id": null,
+      "type": "date",
+      "text": "2026",
+      "context": "Clause 4"
+    },
+    {
+      "object_id": "obj_30",
+      "clause_id": null,
+      "type": "date",
+      "text": "2026",
+      "context": "Clause 5"
+    },
+    {
+      "object_id": "obj_31",
+      "clause_id": null,
+      "type": "obligation",
+      "text": "This circular is available on SEBI website at www.sebi.gov.in under the category: \u2018Legal \u2192 Circulars\u2019",
+      "context": "Clause 5"
+    },
+    {
+      "object_id": "obj_32",
+      "clause_id": null,
+      "type": "date",
+      "text": "2026",
+      "context": null
+    }
+  ]
+}

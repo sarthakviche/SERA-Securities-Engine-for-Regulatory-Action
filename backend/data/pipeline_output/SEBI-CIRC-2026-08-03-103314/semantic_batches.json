@@ -1,0 +1,119 @@
+{
+  "document_path": "D:\\SERA\\sera\\backend\\downloads\\SEBI-CIRC-2026-08-03-103314.pdf",
+  "total_batches": 7,
+  "total_clauses_batched": 27,
+  "built_at": "2026-08-05T19:22:02.789171",
+  "batches": [
+    {
+      "batch_id": "b_0",
+      "clause_ids": [
+        "c_0",
+        "c_1",
+        "c_2",
+        "c_3",
+        "c_4"
+      ],
+      "page_range": [
+        0,
+        0
+      ],
+      "path_prefix": "[Research Analyst Administration and Supervisory Body (RAASB)]",
+      "estimated_tokens": 137,
+      "text": "Location: [Research Analyst Administration and Supervisory Body (RAASB)]\nContent: Dear Sir/Madam,\n\n---\n\nLocation: [2026] > Clause 1.\nContent: 1. SEBI vide circular no. HO/38/12/11(1)2025-MIRSD-POD/I/73/2025 dated October\n\n---\n\nLocation: [2026] > Clause 1.\nContext: 1. SEBI vide circular no. HO/38/12/11(1)2025-MIRSD-POD/I/73/2025 dated October\nContent: 30, 2025, specified that Investment Advisers (“IAs”)/ Research Analysts (“RAs”)\n\n---\n\nLocation: [2026] > Clause 1.\nContext: 1. SEBI vide circular no. HO/38/12/11(1)2025-MIRSD-POD/I/73/2025 dated October\nContent: who wish to communicate certified past performance data to clients (including\n\n---\n\nLocation: [2026] > Clause 1.\nContext: 1. SEBI vide circular no. HO/38/12/11(1)2025-MIRSD-POD/I/73/2025 dated October\nContent: prospective clients) must enrol with Past Risk and Return Verification Agency"
+    },
+    {
+      "batch_id": "b_1",
+      "clause_ids": [
+        "c_5",
+        "c_6",
+        "c_7",
+        "c_8",
+        "c_9"
+      ],
+      "page_range": [
+        0,
+        0
+      ],
+      "path_prefix": "[2026] > Clause 1.",
+      "estimated_tokens": 156,
+      "text": "Location: [2026] > Clause 1.\nContext: 1. SEBI vide circular no. HO/38/12/11(1)2025-MIRSD-POD/I/73/2025 dated October\nContent: (“PaRRVA”) within three months of its operationalization, else such IAs/RAs will\n\n---\n\nLocation: [2026] > Clause 1.\nContext: 1. SEBI vide circular no. HO/38/12/11(1)2025-MIRSD-POD/I/73/2025 dated October\nContent: not be able to communicate certified past performance data to clients post three\n\n---\n\nLocation: [2026] > Clause 1.\nContext: 1. SEBI vide circular no. HO/38/12/11(1)2025-MIRSD-POD/I/73/2025 dated October\nContent: months from the date of operationalization of PaRRVA.\n\n---\n\nLocation: [2026] > Clause 2.\nContent: 2. Subsequently, SEBI, vide circular no. HO/38/14/(4)2026-MIRSD-POD/I/10557/\n\n---\n\nLocation: [2026] > Clause 2.\nContext: 2. Subsequently, SEBI, vide circular no. HO/38/14/(4)2026-MIRSD-POD/I/10557/\nContent: 2026 dated April 29, 2026, specified that IAs/RAs who wish to communicate"
+    },
+    {
+      "batch_id": "b_2",
+      "clause_ids": [
+        "c_10",
+        "c_11",
+        "c_12",
+        "c_13",
+        "c_14"
+      ],
+      "page_range": [
+        0,
+        0
+      ],
+      "path_prefix": "[2026] > Clause 2.",
+      "estimated_tokens": 153,
+      "text": "Location: [2026] > Clause 2.\nContext: 2. Subsequently, SEBI, vide circular no. HO/38/14/(4)2026-MIRSD-POD/I/10557/\nContent: certified past performance data to clients (including prospective clients) must enrol\n\n---\n\nLocation: [2026] > Clause 2.\nContext: 2. Subsequently, SEBI, vide circular no. HO/38/14/(4)2026-MIRSD-POD/I/10557/\nContent: with PaRRVA by August 03, 2026, in view of operationalization of PaRRVA from\n\n---\n\nLocation: [2026] > Clause 2.\nContext: 2. Subsequently, SEBI, vide circular no. HO/38/14/(4)2026-MIRSD-POD/I/10557/\nContent: May 04, 2026.\n\n---\n\nLocation: [2026] > Clause 3.\nContent: 3. However, SEBI has received representations from industry participants and\n\n---\n\nLocation: [2026] > Clause 3.\nContext: 3. However, SEBI has received representations from industry participants and\nContent: PaRRVA requesting for an extension of aforesaid timeline for enrolment. After due"
+    },
+    {
+      "batch_id": "b_3",
+      "clause_ids": [
+        "c_15",
+        "c_16",
+        "c_17",
+        "c_18"
+      ],
+      "page_range": [
+        0,
+        1
+      ],
+      "path_prefix": "[2026] > Clause 3.",
+      "estimated_tokens": 136,
+      "text": "Location: [2026] > Clause 3.\nContext: 3. However, SEBI has received representations from industry participants and\nContent: consideration, SEBI has decided to extend the timeline until September 03, 2026,\n\n---\n\nLocation: [2026] > Clause 3.\nContext: 3. However, SEBI has received representations from industry participants and\nContent: framework.\n\n---\n\nLocation: [2026] > Clause 4.\nContent: 4. This circular is issued in exercise of powers conferred under Section 11(1) of\n\n---\n\nLocation: [2026] > Clause 4.\nContext: 4. This circular is issued in exercise of powers conferred under Section 11(1) of\nContent: Chapter IV of the Securities and Exchange Board of India Act, 1992, read with"
+    },
+    {
+      "batch_id": "b_4",
+      "clause_ids": [
+        "c_19",
+        "c_20",
+        "c_21"
+      ],
+      "page_range": [
+        1,
+        1
+      ],
+      "path_prefix": "[2026] > Clause 4.",
+      "estimated_tokens": 128,
+      "text": "Location: [2026] > Clause 4.\nContext: 4. This circular is issued in exercise of powers conferred under Section 11(1) of\nContent: Regulation 16D, 16E and 16F of the SEBI (Intermediaries) Regulations, 2008,\n\n---\n\nLocation: [2026] > Clause 4.\nContext: 4. This circular is issued in exercise of powers conferred under Section 11(1) of\nContent: Regulation 29 of the SEBI (Investment Advisers) Regulations, 2013 and Regulation\n\n---\n\nLocation: [2026] > Clause 4.\nContext: 4. This circular is issued in exercise of powers conferred under Section 11(1) of\nContent: 33 of SEBI (Research Analysts) Regulations, 2014 to protect the interests of"
+    },
+    {
+      "batch_id": "b_5",
+      "clause_ids": [
+        "c_22",
+        "c_23",
+        "c_24",
+        "c_25"
+      ],
+      "page_range": [
+        1,
+        1
+      ],
+      "path_prefix": "[2026] > Clause 4.",
+      "estimated_tokens": 131,
+      "text": "Location: [2026] > Clause 4.\nContext: 4. This circular is issued in exercise of powers conferred under Section 11(1) of\nContent: investors in securities, to promote the development of, and to regulate the\n\n---\n\nLocation: [2026] > Clause 4.\nContext: 4. This circular is issued in exercise of powers conferred under Section 11(1) of\nContent: securities markets.\n\n---\n\nLocation: [2026] > Clause 5.\nContent: 5. This circular is available on SEBI website at www.sebi.gov.in under the category:\n\n---\n\nLocation: [2026] > Clause 5.\nContext: 5. This circular is available on SEBI website at www.sebi.gov.in under the category:\nContent: ‘Legal → Circulars’."
+    },
+    {
+      "batch_id": "b_6",
+      "clause_ids": [
+        "c_26"
+      ],
+      "page_range": [
+        1,
+        1
+      ],
+      "path_prefix": "[2026] > Clause 5.",
+      "estimated_tokens": 28,
+      "text": "Location: [2026] > Clause 5.\nContext: 5. This circular is available on SEBI website at www.sebi.gov.in under the category:\nContent: Yours faithfully,"
+    }
+  ]
+}
