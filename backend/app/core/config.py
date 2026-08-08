@@ -10,6 +10,15 @@ class Settings(BaseSettings):
     APP_NAME: str = "SERA Regulatory Monitoring Service"
     DEBUG_MODE: bool = False
     
+    # Database configuration
+    DATABASE_URL: str = Field(
+        default="postgresql+asyncpg://postgres:postgres@localhost:5432/sera"
+    )
+    
+    # LLM Configuration
+    GROQ_API_KEY: str = Field(default="")
+    LLM_MODEL: str = Field(default="llama-3.3-70b-versatile")
+    
     # SEBI Scraping configuration
     SEBI_BASE_URL: str = "https://www.sebi.gov.in"
     SEBI_CIRCULARS_URL: str = f"{SEBI_BASE_URL}/sebiweb/other/OtherAction.do?doListing=yes&sid=3&ssid=0&smid=0"

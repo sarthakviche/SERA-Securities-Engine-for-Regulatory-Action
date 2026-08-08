@@ -1,0 +1,146 @@
+{
+  "overall_applicability_score": 0.8,
+  "overall_reasoning": "The regulatory objects are generally applicable to the Investment Adviser (IA) / Research Analyst (RA) organization, but some objects are not directly relevant.",
+  "object_assessments": [
+    {
+      "object_id": "obj_1",
+      "is_applicable": true,
+      "reasoning": "The object is applicable because it mentions the requirement for Investment Advisers (IAs)/Research Analysts (RAs) to enrol with Past Risk and Return Verification Agency.",
+      "confidence_score": 1.0,
+      "relevant_context": "SEBI circular no. HO/38/12/11(1)2025-MIRSD-POD/I/73/2025 dated October 30, 2025"
+    },
+    {
+      "object_id": "obj_2",
+      "is_applicable": false,
+      "reasoning": "The object is not applicable because it is a date and does not contain any relevant information for the Investment Adviser (IA) / Research Analyst (RA) organization.",
+      "confidence_score": 1.0,
+      "relevant_context": null
+    },
+    {
+      "object_id": "obj_3",
+      "is_applicable": true,
+      "reasoning": "The object is applicable because it defines Investment Advisers (IAs)/Research Analysts (RAs), which is relevant to the target organization.",
+      "confidence_score": 1.0,
+      "relevant_context": "Clause 1 of SEBI circular no. HO/38/12/11(1)2025-MIRSD-POD/I/73/2025 dated October 30, 2025"
+    },
+    {
+      "object_id": "obj_4",
+      "is_applicable": false,
+      "reasoning": "The object is not applicable because it mentions a timeframe for operationalization, which is not directly relevant to the Investment Adviser (IA) / Research Analyst (RA) organization.",
+      "confidence_score": 1.0,
+      "relevant_context": "SEBI vide circular no. HO/38/12/11(1)2025-MIRSD-POD/I/73/2025 dated October"
+    },
+    {
+      "object_id": "obj_5",
+      "is_applicable": false,
+      "reasoning": "The object is not applicable because it mentions a timeframe for communication, which is not directly relevant to the Investment Adviser (IA) / Research Analyst (RA) organization.",
+      "confidence_score": 1.0,
+      "relevant_context": "SEBI vide circular no. HO/38/12/11(1)2025-MIRSD-POD/I/73/2025 dated October"
+    },
+    {
+      "object_id": "obj_6",
+      "is_applicable": false,
+      "reasoning": "The object is not applicable because it mentions a timeframe for enrolment, which is not directly relevant to the Investment Adviser (IA) / Research Analyst (RA) organization.",
+      "confidence_score": 1.0,
+      "relevant_context": "SEBI vide circular no. HO/38/12/11(1)2025-MIRSD-POD/I/73/2025 dated October"
+    },
+    {
+      "object_id": "obj_7",
+      "is_applicable": false,
+      "reasoning": "The object is not applicable because it mentions a requirement for communication, which is not directly relevant to the Investment Adviser (IA) / Research Analyst (RA) organization.",
+      "confidence_score": 1.0,
+      "relevant_context": "SEBI, vide circular no. HO/38/14/(4)2026-MIRSD-POD/I/10557/2026 dated April 29, 2026"
+    },
+    {
+      "object_id": "obj_8",
+      "is_applicable": false,
+      "reasoning": "The object is not applicable because it is a date and does not contain any relevant information for the Investment Adviser (IA) / Research Analyst (RA) organization.",
+      "confidence_score": 1.0,
+      "relevant_context": "SEBI vide circular no. HO/38/12/11(1)2025-MIRSD-POD/I/73/2025 dated October"
+    },
+    {
+      "object_id": "obj_9",
+      "is_applicable": false,
+      "reasoning": "The object is not applicable because it is a date and does not contain any relevant information for the Investment Adviser (IA) / Research Analyst (RA) organization.",
+      "confidence_score": 1.0,
+      "relevant_context": "SEBI, vide circular no. HO/38/14/(4)2026-MIRSD-POD/I/10557/2026 dated April 29, 2026"
+    },
+    {
+      "object_id": "obj_10",
+      "is_applicable": true,
+      "reasoning": "The object is applicable because it defines PaRRVA, which is relevant to the target organization.",
+      "confidence_score": 1.0,
+      "relevant_context": "SEBI vide circular no. HO/38/12/11(1)2025-MIRSD-POD/I/73/2025 dated October"
+    },
+    {
+      "object_id": "obj_11",
+      "is_applicable": true,
+      "reasoning": "The object is applicable because it mentions the requirement for Investment Advisers (IAs)/Research Analysts (RAs) to enrol with Past Risk and Return Verification Agency.",
+      "confidence_score": 1.0,
+      "relevant_context": "SEBI circular no. HO/38/14/(4)2026-MIRSD-POD/I/10557"
+    },
+    {
+      "object_id": "obj_12",
+      "is_applicable": false,
+      "reasoning": "The object is not applicable because it is a date and does not contain any relevant information for the Investment Adviser (IA) / Research Analyst (RA) organization.",
+      "confidence_score": 1.0,
+      "relevant_context": "enrolment deadline for PaRRVA"
+    },
+    {
+      "object_id": "obj_13",
+      "is_applicable": false,
+      "reasoning": "The object is not applicable because it is a date and does not contain any relevant information for the Investment Adviser (IA) / Research Analyst (RA) organization.",
+      "confidence_score": 1.0,
+      "relevant_context": "SEBI circular date"
+    },
+    {
+      "object_id": "obj_14",
+      "is_applicable": false,
+      "reasoning": "The object is not applicable because it mentions an exemption, which is not directly relevant to the Investment Adviser (IA) / Research Analyst (RA) organization.",
+      "confidence_score": 1.0,
+      "relevant_context": "PaRRVA representation to SEBI"
+    },
+    {
+      "object_id": "obj_15",
+      "is_applicable": false,
+      "reasoning": "The object is not applicable because it is a date and does not contain any relevant information for the Investment Adviser (IA) / Research Analyst (RA) organization.",
+      "confidence_score": 1.0,
+      "relevant_context": null
+    },
+    {
+      "object_id": "obj_16",
+      "is_applicable": false,
+      "reasoning": "The object is not applicable because it is a definition and does not contain any relevant information for the Investment Adviser (IA) / Research Analyst (RA) organization.",
+      "confidence_score": 1.0,
+      "relevant_context": null
+    },
+    {
+      "object_id": "obj_17",
+      "is_applicable": false,
+      "reasoning": "The object is not applicable because it is a definition and does not contain any relevant information for the Investment Adviser (IA) / Research Analyst (RA) organization.",
+      "confidence_score": 1.0,
+      "relevant_context": null
+    },
+    {
+      "object_id": "obj_18",
+      "is_applicable": false,
+      "reasoning": "The object is not applicable because it is a definition and does not contain any relevant information for the Investment Adviser (IA) / Research Analyst (RA) organization.",
+      "confidence_score": 1.0,
+      "relevant_context": null
+    },
+    {
+      "object_id": "obj_19",
+      "is_applicable": false,
+      "reasoning": "The object is not applicable because it mentions an obligation, but it is not directly relevant to the Investment Adviser (IA) / Research Analyst (RA) organization.",
+      "confidence_score": 1.0,
+      "relevant_context": "SEBI (Intermediaries) Regulations, 2008"
+    },
+    {
+      "object_id": "obj_20",
+      "is_applicable": false,
+      "reasoning": "The object is not applicable because it mentions an obligation, but it is not directly relevant to the Investment Adviser (IA) / Research Analyst (RA) organization.",
+      "confidence_score": 1.0,
+      "relevant_context": "SEBI (Investment Advisers) Regulations, 2013"
+    }
+  ]
+}

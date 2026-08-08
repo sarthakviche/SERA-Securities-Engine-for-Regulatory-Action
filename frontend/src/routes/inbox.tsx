@@ -6,9 +6,10 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useDemo } from "@/lib/demo";
 import { formatDateTime } from "@/lib/format";
-import { Filter, RefreshCcw, Mail, TriangleAlert, Sparkles, ArrowRight } from "lucide-react";
+import { Filter, RefreshCcw, Mail, TriangleAlert, Sparkles, ArrowRight, Play } from "lucide-react";
 import { useState } from "react";
-
+import { usePipeline } from "@/hooks/use-pipeline";
+import { PipelineProgress } from "@/components/sera/pipeline-progress";
 export const Route = createFileRoute("/inbox")({
   head: () => ({ meta: [{ title: "Regulatory Inbox · SERA" }] }),
   component: Inbox,
@@ -19,6 +20,7 @@ const TABS = ["All Communications", "Flagged", "Analyzing"] as const;
 function Inbox() {
   const { circulars, demoStage } = useDemo();
   const navigate = useNavigate();
+  const { startPipeline, activeJobId, jobStatus } = usePipeline();
   const [tab, setTab] = useState<(typeof TABS)[number]>("All Communications");
   const filtered = circulars.filter((c) =>
     tab === "Flagged"
@@ -30,6 +32,7 @@ function Inbox() {
 
   return (
     <AppShell>
+      <PipelineProgress jobStatus={jobStatus} activeJobId={activeJobId} />
       <PageHeader
         title="Regulatory Inbox"
         description="Consolidated feed of global regulatory updates and communications."
@@ -189,7 +192,20 @@ function Inbox() {
                         </div>
                       </div>
                     ) : (
-                      <div className="mt-0.5 truncate text-xs text-muted-foreground">{c.summary}</div>
+                      <div className="mt-0.5 text-xs text-muted-foreground flex items-center gap-2">
+                        <span className="truncate max-w-[280px]">{c.summary}</span>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="h-6 text-[10px] px-2 py-0 cursor-pointer border-primary/20 text-primary hover:bg-primary/5"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startPipeline(c.id);
+                          }}
+                        >
+                          <Play className="h-3 w-3 mr-1" /> Run Pipeline
+                        </Button>
+                      </div>
                     )}
                   </td>
                   <td className="px-6 py-4">

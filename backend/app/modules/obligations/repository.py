@@ -1,0 +1,63 @@
+import uuid
+from typing import List, Dict, Any
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.obligation import Obligation
+
+class ObligationRepository:
+    
+    async def get_by_workflow(self, db: AsyncSession, workflow_id: uuid.UUID) -> List[Obligation]:
+        stmt = select(Obligation).where(Obligation.workflow_id == workflow_id)
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def upsert_obligations(
+        self, 
+        db: AsyncSession, 
+        workflow_id: uuid.UUID, 
+        obligations_data: List[Dict[str, Any]]
+    ) -> List[Obligation]:
+        """
+        Upserts obligations for a workflow. For simplicity in the prototype,
+        we rely on the workflow_id to prevent duplicate creation if the pipeline
+        is run multiple times, by clearing existing obligations for this workflow
+        and recreating them.
+        """
+        # Fetch existing obligations for this workflow
+        existing_stmt = select(Obligation).where(Obligation.workflow_id == workflow_id)
+        result = await db.execute(existing_stmt)
+        existing_obligations = list(result.scalars().all())
+        
+        # Delete existing ones to ensure idempotency for the prototype
+        for obs in existing_obligations:
+            await db.delete(obs)
+            
+        await db.flush()
+
+        new_obligations = []
+        for obs_data in obligations_data:
+            # Only map fields that actually exist in the mock outputs
+            title = obs_data.get("title", "")
+            category = obs_data.get("category")
+            
+            # Ensure title is present as it's not nullable in the model
+            if not title:
+                continue
+                
+            obl_id_str = obs_data.get("id")
+            obl_id = uuid.UUID(obl_id_str) if obl_id_str else uuid.uuid4()
+                
+            obligation = Obligation(
+                id=obl_id,
+                workflow_id=workflow_id,
+                title=title,
+                category=category,
+                status="pending"
+            )
+            db.add(obligation)
+            new_obligations.append(obligation)
+            
+        await db.flush()
+        return new_obligations
+
+obligation_repository = ObligationRepository()

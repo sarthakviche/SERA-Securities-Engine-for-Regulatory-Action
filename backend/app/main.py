@@ -5,6 +5,7 @@ import contextlib
 from app.core.config import settings
 from app.core.logging import setup_logging
 from app.modules.documents.router import router as documents_router
+from app.pipeline.router import router as pipeline_router
 from app.workers import monitor
 
 # Setup logging before FastAPI initializes fully
@@ -36,8 +37,9 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Include routers
+    # Register routers
     app.include_router(documents_router)
+    app.include_router(pipeline_router)
     
     @app.get("/")
     async def root():
