@@ -1,6 +1,5 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
-  Bell,
   Command,
   HelpCircle,
   LayoutDashboard,
@@ -29,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { nav } from "@/lib/mock-data";
 import { useDemo } from "@/lib/demo";
 import { toast } from "sonner";
+import { NotificationPanel } from "@/components/sera/notification-panel";
 
 const iconMap = {
   LayoutDashboard,
@@ -110,10 +110,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Button variant="ghost" size="icon" onClick={toggle} aria-label="Toggle theme">
               {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
-            <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
-              <Bell className="h-4 w-4" />
-              <span className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-destructive" />
-            </Button>
+            <NotificationPanel />
             <Button variant="ghost" size="icon" aria-label="Help">
               <HelpCircle className="h-4 w-4" />
             </Button>

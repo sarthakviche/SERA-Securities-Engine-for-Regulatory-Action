@@ -26,6 +26,18 @@ class Settings(BaseSettings):
     # Placeholder organization ID for single-tenant mode
     ORG_ID_DEFAULT: str = Field(default="00000000-0000-0000-0000-000000000001")
 
+    # ── Notification / Email ──────────────────────────────────────────────────
+    # Resend transactional email provider (https://resend.com)
+    RESEND_API_KEY: str = Field(default="")
+    RESEND_FROM_EMAIL: str = Field(default="noreply@sera-compliance.dev")
+    # Single target address for MVP single-tenant mode. Leave blank to skip email.
+    NOTIFICATION_EMAIL_RECIPIENT: str = Field(default="")
+    # Set to False in local dev to skip all email delivery while keeping in-app
+    # notifications fully functional.
+    EMAIL_ENABLED: bool = Field(default=True)
+    # Base URL of the frontend — used to build CTA links inside email bodies.
+    FRONTEND_URL: str = Field(default="http://localhost:5173")
+
     # Backend selector for this slice's swappable fakes (see ai/graph/deps.py).
     # "memory" (default, prototype) -> in-memory fakes.
     # "postgres" -> real implementations; not wired up yet, reserved for teammates.

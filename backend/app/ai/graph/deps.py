@@ -22,6 +22,7 @@ from app.adapters.memory.store import InMemoryOrgStore
 from app.ai.providers.llm_provider import AnthropicLLMProvider, LLMProvider
 from app.core.config import Settings, get_settings
 from app.core.events import EventPublisher, InMemoryEventPublisher
+from app.core.notification_event_publisher import NotificationAwareEventPublisher
 from app.modules.audit.repository import AuditRepository, InMemoryAuditRepository
 from app.modules.knowledge.organizational.repository import (
     InMemoryOrganizationalRepository,
@@ -61,9 +62,13 @@ def build_deps(
     if db_session:
         from app.modules.workflow.repository_sql import SQLAlchemyWorkflowRepository
         workflow_repository = SQLAlchemyWorkflowRepository(db_session)
+        # Use the real notification-aware publisher when a DB session is available
+        event_publisher = event_publisher or NotificationAwareEventPublisher(db_session)
     else:
         workflow_repository = workflow_repository or InMemoryWorkflowRepository()
-        
+        # Tests inject InMemoryEventPublisher directly; fall back to it here
+        event_publisher = event_publisher or InMemoryEventPublisher()
+
     return NodeDeps(
         workflow_service=AgentWorkflowService(workflow_repository),
         organizational_repo=InMemoryOrganizationalRepository(store),
@@ -71,7 +76,7 @@ def build_deps(
         task_repo=InMemoryTaskRepository(store),
         audit_repo=InMemoryAuditRepository(store),
         retrieval_provider=InMemoryRetrievalProvider(store),
-        event_publisher=event_publisher or InMemoryEventPublisher(),
+        event_publisher=event_publisher,
         llm_provider=llm_provider or AnthropicLLMProvider(settings),
         org_store=store,
     )
