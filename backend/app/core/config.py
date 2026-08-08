@@ -1,3 +1,4 @@
+from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 import os
@@ -19,6 +20,14 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = Field(default="")
     LLM_MODEL: str = Field(default="llama-3.3-70b-versatile")
     
+    anthropic_api_key: str = Field(default="")
+    anthropic_model: str = Field(default="claude-sonnet-5")
+
+    # Backend selector for this slice's swappable fakes (see ai/graph/deps.py).
+    # "memory" (default, prototype) -> in-memory fakes.
+    # "postgres" -> real implementations; not wired up yet, reserved for teammates.
+    org_data_backend: str = Field(default="memory")
+
     # SEBI Scraping configuration
     SEBI_BASE_URL: str = "https://www.sebi.gov.in"
     SEBI_CIRCULARS_URL: str = f"{SEBI_BASE_URL}/sebiweb/other/OtherAction.do?doListing=yes&sid=3&ssid=0&smid=0"
@@ -47,6 +56,10 @@ class Settings(BaseSettings):
     )
 
 settings = Settings()
+
+@lru_cache
+def get_settings() -> Settings:
+    return settings
 
 # Ensure directories exist
 os.makedirs(settings.DATA_DIR, exist_ok=True)

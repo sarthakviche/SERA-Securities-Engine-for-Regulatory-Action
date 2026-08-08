@@ -1,10 +1,18 @@
+"""Task Repository — merged file for both HEAD and their branches."""
+
+from __future__ import annotations
+
 import uuid
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Protocol
+from uuid import UUID
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.task import Task
 
-class TaskRepository:
+from app.adapters.memory.store import InMemoryOrgStore, TaskRow
+
+class SQLAlchemyTaskRepository:
     
     async def get_by_workflow(self, db: AsyncSession, workflow_id: uuid.UUID) -> List[Task]:
         stmt = select(Task).where(Task.workflow_id == workflow_id)
@@ -56,4 +64,16 @@ class TaskRepository:
         await db.flush()
         return new_tasks
 
-task_repository = TaskRepository()
+task_repository = SQLAlchemyTaskRepository()
+
+
+class TaskRepository(Protocol):
+    async def list_for_workflow(self, workflow_id: UUID) -> list[TaskRow]: ...
+
+
+class InMemoryTaskRepository:
+    def __init__(self, store: InMemoryOrgStore) -> None:
+        self._store = store
+
+    async def list_for_workflow(self, workflow_id: UUID) -> list[TaskRow]:
+        return [row for row in self._store.tables.tasks if row.workflow_id == workflow_id]

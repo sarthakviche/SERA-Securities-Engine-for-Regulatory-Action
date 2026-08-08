@@ -1,10 +1,18 @@
+"""Obligation Repository — merged file for both HEAD and their branches."""
+
+from __future__ import annotations
+
 import uuid
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Protocol
+from uuid import UUID
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.obligation import Obligation
 
-class ObligationRepository:
+from app.adapters.memory.store import InMemoryOrgStore, ObligationRow
+
+class SQLAlchemyObligationRepository:
     
     async def get_by_workflow(self, db: AsyncSession, workflow_id: uuid.UUID) -> List[Obligation]:
         stmt = select(Obligation).where(Obligation.workflow_id == workflow_id)
@@ -60,4 +68,29 @@ class ObligationRepository:
         await db.flush()
         return new_obligations
 
-obligation_repository = ObligationRepository()
+obligation_repository = SQLAlchemyObligationRepository()
+
+
+class ObligationRepository(Protocol):
+    async def list(self, obligation_ids: list[UUID] | None = None) -> list[ObligationRow]: ...
+
+    async def update_owner_department(self, obligation_id: UUID, department_id: UUID) -> None: ...
+
+
+class InMemoryObligationRepository:
+    def __init__(self, store: InMemoryOrgStore) -> None:
+        self._store = store
+
+    async def list(self, obligation_ids: list[UUID] | None = None) -> list[ObligationRow]:
+        rows = self._store.tables.obligations
+        if obligation_ids is None:
+            return list(rows)
+        wanted = set(obligation_ids)
+        return [row for row in rows if row.id in wanted]
+
+    async def update_owner_department(self, obligation_id: UUID, department_id: UUID) -> None:
+        for row in self._store.tables.obligations:
+            if row.id == obligation_id:
+                row.owner_department_id = department_id
+                return
+        raise KeyError(f"obligation {obligation_id} not found")

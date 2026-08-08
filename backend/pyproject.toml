@@ -1,0 +1,30 @@
+[project]
+name = "sera-backend"
+version = "0.1.0"
+description = "SERA backend — this slice (feature/Mapping_Agents) populates only the dependencies impact_mapping_agent / sop_generation_agent / evidence_implementation_plan_agent need. fastapi, sqlalchemy, alembic, celery, redis, boto3 etc. per TRD §2 are intentionally left out for whoever picks up core/db.py, the API layer, and background workers."
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "langgraph>=0.2",
+    "anthropic>=0.40",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
