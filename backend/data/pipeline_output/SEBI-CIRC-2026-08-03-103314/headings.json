@@ -1,0 +1,211 @@
+{
+  "document_path": "D:\\SERA\\sera\\backend\\downloads\\SEBI-CIRC-2026-08-03-103314.pdf",
+  "total_headings": 12,
+  "detected_at": "2026-08-05T19:11:05.533495",
+  "headings": [
+    {
+      "heading_id": "h_p0_b3",
+      "page": 0,
+      "level": "document_title",
+      "text": "CIRCULAR",
+      "block_id": "p0_b3",
+      "bbox": {
+        "x0": 266.33,
+        "y0": 95.36,
+        "x1": 332.306,
+        "y1": 108.74
+      },
+      "font_size": 12.0,
+      "is_bold": true,
+      "is_uppercase": true,
+      "numbering": null
+    },
+    {
+      "heading_id": "h_p0_b5",
+      "page": 0,
+      "level": "section",
+      "text": "HO/38/14/(11)2026-MIRSD-POD1/ I/18038/2026 August 03, 2026",
+      "block_id": "p0_b5",
+      "bbox": {
+        "x0": 72.024,
+        "y0": 136.76,
+        "x1": 526.756,
+        "y1": 150.14
+      },
+      "font_size": 12.0,
+      "is_bold": true,
+      "is_uppercase": false,
+      "numbering": null
+    },
+    {
+      "heading_id": "h_p0_b7",
+      "page": 0,
+      "level": "section",
+      "text": "To,",
+      "block_id": "p0_b7",
+      "bbox": {
+        "x0": 72.024,
+        "y0": 178.16,
+        "x1": 93.36,
+        "y1": 191.54
+      },
+      "font_size": 12.0,
+      "is_bold": true,
+      "is_uppercase": false,
+      "numbering": null
+    },
+    {
+      "heading_id": "h_p0_b8",
+      "page": 0,
+      "level": "section",
+      "text": "All Registered Investment Advisers",
+      "block_id": "p0_b8",
+      "bbox": {
+        "x0": 72.024,
+        "y0": 198.92,
+        "x1": 276.746,
+        "y1": 212.3
+      },
+      "font_size": 12.0,
+      "is_bold": true,
+      "is_uppercase": false,
+      "numbering": null
+    },
+    {
+      "heading_id": "h_p0_b9",
+      "page": 0,
+      "level": "section",
+      "text": "All Registered Research Analysts",
+      "block_id": "p0_b9",
+      "bbox": {
+        "x0": 72.024,
+        "y0": 219.56,
+        "x1": 266.786,
+        "y1": 232.94
+      },
+      "font_size": 12.0,
+      "is_bold": true,
+      "is_uppercase": false,
+      "numbering": null
+    },
+    {
+      "heading_id": "h_p0_b10",
+      "page": 0,
+      "level": "section",
+      "text": "Investment Adviser Administration and Supervisory Body (IAASB)",
+      "block_id": "p0_b10",
+      "bbox": {
+        "x0": 72.024,
+        "y0": 240.32,
+        "x1": 453.526,
+        "y1": 253.7
+      },
+      "font_size": 12.0,
+      "is_bold": true,
+      "is_uppercase": false,
+      "numbering": null
+    },
+    {
+      "heading_id": "h_p0_b11",
+      "page": 0,
+      "level": "section",
+      "text": "Research Analyst Administration and Supervisory Body (RAASB)",
+      "block_id": "p0_b11",
+      "bbox": {
+        "x0": 72.024,
+        "y0": 260.96,
+        "x1": 445.164,
+        "y1": 274.34
+      },
+      "font_size": 12.0,
+      "is_bold": true,
+      "is_uppercase": false,
+      "numbering": null
+    },
+    {
+      "heading_id": "h_p0_b15",
+      "page": 0,
+      "level": "section",
+      "text": "Sub: Extension of timeline for enrolment with PaRRVA as specified in SEBI",
+      "block_id": "p0_b15",
+      "bbox": {
+        "x0": 72.624,
+        "y0": 343.79,
+        "x1": 526.732,
+        "y1": 357.17
+      },
+      "font_size": 12.0,
+      "is_bold": true,
+      "is_uppercase": false,
+      "numbering": null
+    },
+    {
+      "heading_id": "h_p0_b16",
+      "page": 0,
+      "level": "section",
+      "text": "Circular No. HO/38/14/(4)2026-MIRSD-POD/I/10557/2026 dated April 29,",
+      "block_id": "p0_b16",
+      "bbox": {
+        "x0": 100.34,
+        "y0": 364.55,
+        "x1": 526.514,
+        "y1": 377.93
+      },
+      "font_size": 12.0,
+      "is_bold": true,
+      "is_uppercase": false,
+      "numbering": null
+    },
+    {
+      "heading_id": "h_p0_b17",
+      "page": 0,
+      "level": "section",
+      "text": "2026",
+      "block_id": "p0_b17",
+      "bbox": {
+        "x0": 100.34,
+        "y0": 385.19,
+        "x1": 130.316,
+        "y1": 398.57
+      },
+      "font_size": 12.0,
+      "is_bold": true,
+      "is_uppercase": false,
+      "numbering": null
+    },
+    {
+      "heading_id": "h_p1_b16",
+      "page": 1,
+      "level": "section",
+      "text": "Sanjukta Mahala Deputy General Manager",
+      "block_id": "p1_b16",
+      "bbox": {
+        "x0": 381.91,
+        "y0": 440.39,
+        "x1": 526.618,
+        "y1": 468.19
+      },
+      "font_size": 12.0,
+      "is_bold": true,
+      "is_uppercase": false,
+      "numbering": null
+    },
+    {
+      "heading_id": "h_p1_b17",
+      "page": 1,
+      "level": "section",
+      "text": "Tel. No. 022-26449288 E-mail: sanjuktam@sebi.gov.in",
+      "block_id": "p1_b17",
+      "bbox": {
+        "x0": 346.27,
+        "y0": 469.33,
+        "x1": 523.336,
+        "y1": 497.23
+      },
+      "font_size": 12.0,
+      "is_bold": true,
+      "is_uppercase": false,
+      "numbering": null
+    }
+  ]
+}

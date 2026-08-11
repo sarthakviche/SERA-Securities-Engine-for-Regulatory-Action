@@ -1,0 +1,28 @@
+{
+  "obligations": [
+    {
+      "id": null,
+      "object_id": "obj_1",
+      "title": "Enrol with Past Risk and Return Verification Agency",
+      "obligation_text": "who wish to communicate certified past performance data to clients (including prospective clients) must enrol with Past Risk and Return Verification Agency",
+      "category": "Registration",
+      "regulatory_reference": "Clause 1 of SEBI circular no. HO/38/12/11(1)2025-MIRSD-POD/I/73/2025 dated October 30, 2025",
+      "responsible_role": null,
+      "deadline": null,
+      "evidence_requirement": null,
+      "confidence_score": 1.0
+    },
+    {
+      "id": null,
+      "object_id": "obj_11",
+      "title": "Enrol with Past Risk and Return Verification Agency",
+      "obligation_text": "certified past performance data to clients (including prospective clients) must enrol",
+      "category": "Registration",
+      "regulatory_reference": "SEBI circular no. HO/38/14/(4)2026-MIRSD-POD/I/10557",
+      "responsible_role": null,
+      "deadline": null,
+      "evidence_requirement": null,
+      "confidence_score": 1.0
+    }
+  ]
+}
