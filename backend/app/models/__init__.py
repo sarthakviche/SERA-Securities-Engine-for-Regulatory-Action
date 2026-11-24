@@ -11,6 +11,8 @@ from app.models.obligation import Obligation
 from app.models.task import Task
 from app.models.notification import Notification
 from app.models.user_notification_preferences import UserNotificationPreferences
+from app.models.audit_event import AuditEvent
+from app.models.org_profile import OrgProfile
 
 __all__ = [
     "RegulatoryDocument",
@@ -19,4 +21,6 @@ __all__ = [
     "Task",
     "Notification",
     "UserNotificationPreferences",
+    "AuditEvent",
+    "OrgProfile",
 ]

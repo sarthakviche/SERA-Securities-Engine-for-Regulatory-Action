@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     LLM_MODEL: str = Field(default="llama-3.3-70b-versatile")
     
     anthropic_api_key: str = Field(default="")
-    anthropic_model: str = Field(default="claude-sonnet-5")
+    anthropic_model: str = Field(default="claude-opus-5-5")
 
     # Placeholder organization ID for single-tenant mode
     ORG_ID_DEFAULT: str = Field(default="00000000-0000-0000-0000-000000000001")

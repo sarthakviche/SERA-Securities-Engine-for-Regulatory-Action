@@ -51,3 +51,8 @@ backend/downloads/
 backend/.env
 frontend/.env
 .env
+# Local dev Postgres cluster
+.localdb/
+
+# SERA runtime data
+backend/data/evidence/
