@@ -28,7 +28,7 @@ _Researched 2026-11-24. Market figures come from analyst summaries and vary wide
 
 ## 3. Differentiators implemented this session
 1. Citation-verified obligation extraction (clause, page and verbatim quote) with a confidence score.
-2. Applicability against the **org profile** (16 SEBI intermediary types), with the reason stated in plain English.
+2. Applicability against the **org profile** (15 SEBI intermediary types), with the reason stated in plain English.
 3. Ambiguity detector (undefined standards, deferred specifications, conditional applicability, event-relative deadlines) that raises interpretation questions.
 4. Deadline intelligence: explicit dates, extensions applied to the obligations they modify, effective dates, and **event-driven SLAs** (e.g. "within 7 working days of closure") kept apart from one-off deadlines.
 5. Impact map (departments with roles, systems), with **fail-closed human review** for unmapped departments.
