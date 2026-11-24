@@ -1,302 +1,186 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useMemo, useRef, useState } from "react";
+import { ArrowRight, CloudDownload, ExternalLink, FileText, Loader2, Play, Search, Upload } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/sera/app-shell";
 import { PageHeader } from "@/components/sera/page-header";
-import { StatusPill, riskTone } from "@/components/sera/status-pill";
-import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/sera/empty-state";
+import { StatusPill } from "@/components/sera/status-pill";
 import { Button } from "@/components/ui/button";
-import { useDemo } from "@/lib/demo";
-import { formatDateTime } from "@/lib/format";
-import { Filter, RefreshCcw, Mail, TriangleAlert, Sparkles, ArrowRight, Play } from "lucide-react";
-import { useState } from "react";
-import { usePipeline } from "@/hooks/use-pipeline";
-import { PipelineProgress } from "@/components/sera/pipeline-progress";
+import { Card } from "@/components/ui/card";
+import { ErrorBox, Loading, RiskPill, WfStatusPill } from "@/components/sera/bits";
+import { fmtDate, providerLabel, sera, setActiveWorkflow, useCirculars, useSeraMutation, type CircularRow } from "@/lib/sera";
+import { cn } from "@/lib/utils";
+
 export const Route = createFileRoute("/inbox")({
   head: () => ({ meta: [{ title: "Regulatory Inbox · SERA" }] }),
+  validateSearch: (s: Record<string, unknown>): { q?: string } => (typeof s.q === "string" && s.q ? { q: s.q } : {}),
   component: Inbox,
 });
 
-const TABS = ["All Communications", "Flagged", "Analyzing"] as const;
+const FILTERS = [
+  { key: "all", label: "All" },
+  { key: "new", label: "Not analysed" },
+  { key: "review", label: "Needs approval" },
+  { key: "impl", label: "Implementing" },
+  { key: "done", label: "Compliant" },
+] as const;
+
+function matches(c: CircularRow, f: (typeof FILTERS)[number]["key"]) {
+  if (f === "all") return true;
+  if (f === "new") return ["created", "failed", "needs_ocr", "changes_requested"].includes(c.status);
+  if (f === "review") return c.status === "pending_approval_1" || c.status === "pending_approval_2";
+  if (f === "impl") return c.status === "executing";
+  return c.status === "compliant";
+}
 
 function Inbox() {
-  const { circulars, demoStage } = useDemo();
+  const { q } = Route.useSearch();
   const navigate = useNavigate();
-  const { startPipeline, activeJobId, jobStatus } = usePipeline();
-  const [tab, setTab] = useState<(typeof TABS)[number]>("All Communications");
-  const filtered = circulars.filter((c) =>
-    tab === "Flagged"
-      ? c.processingStatus === "Flagged"
-      : tab === "Analyzing"
-        ? c.processingStatus === "Analyzing"
-        : true,
-  );
+  const { data, error, isLoading } = useCirculars();
+  const [filter, setFilter] = useState<(typeof FILTERS)[number]["key"]>("all");
+  const [query, setQuery] = useState(q ?? "");
+  const [drag, setDrag] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const upload = useSeraMutation((f: File) => sera.upload(f));
+  const sync = useSeraMutation(() => sera.sync());
+  const analyze = useSeraMutation((id: string) => sera.analyze(id));
+
+  const rows = useMemo(() => {
+    const t = query.trim().toLowerCase();
+    return (data ?? []).filter((c) => matches(c, filter) && (!t || `${c.title} ${c.reference} ${c.summary ?? ""}`.toLowerCase().includes(t)));
+  }, [data, filter, query]);
+
+  const doUpload = (f?: File | null) => {
+    if (!f) return;
+    if (!f.name.toLowerCase().endsWith(".pdf")) return toast.error("Please choose a PDF circular.");
+    toast.promise(upload.mutateAsync(f), {
+      loading: `Uploading ${f.name}…`,
+      success: (r) => {
+        setActiveWorkflow(r.workflow_id);
+        return r.created ? "Circular received - analysis started" : "Circular already in SERA - opened it";
+      },
+      error: (e) => (e as Error).message,
+    });
+  };
+
+  const open = (c: CircularRow) => {
+    if (c.workflow_id) setActiveWorkflow(c.workflow_id);
+    navigate({ to: "/workspace" });
+  };
 
   return (
     <AppShell>
-      <PipelineProgress jobStatus={jobStatus} activeJobId={activeJobId} />
       <PageHeader
+        eyebrow="Detection & intake"
         title="Regulatory Inbox"
-        description="Consolidated feed of global regulatory updates and communications."
+        description="Circulars detected from SEBI or uploaded by your team. Each one becomes a traceable workflow."
         actions={
           <>
-            <Button variant="outline" className="gap-2">
-              <Filter className="h-4 w-4" /> Filter
+            <Button
+              variant="outline"
+              disabled={sync.isPending}
+              onClick={() =>
+                toast.promise(sync.mutateAsync(undefined), {
+                  loading: "Checking sebi.gov.in for new circulars…",
+                  success: (r) => `SEBI sync done: ${r.new} new listing(s), ${r.registered + r.seeded} added to SERA`,
+                  error: (e) => (e as Error).message,
+                })
+              }
+            >
+              {sync.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CloudDownload className="mr-1.5 h-4 w-4" />}
+              Sync from SEBI
             </Button>
-            <Button className="gap-2">
-              <RefreshCcw className="h-4 w-4" /> Sync Now
+            <Button onClick={() => fileRef.current?.click()} disabled={upload.isPending}>
+              <Upload className="mr-1.5 h-4 w-4" /> Upload circular PDF
             </Button>
+            <input ref={fileRef} type="file" accept="application/pdf" hidden onChange={(e) => { doUpload(e.target.files?.[0]); e.target.value = ""; }} />
           </>
         }
       />
 
-      {/* Stat cards */}
-      <section className="grid gap-4 md:grid-cols-3">
-        <Card className="rounded-2xl p-5">
-          <div className="mb-6 flex items-center justify-between bg-card">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-              <Mail className="h-4 w-4" />
-            </div>
-            <StatusPill tone="success">+12%</StatusPill>
-          </div>
-          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            Unread Updates
-          </div>
-          <div className="mt-1 text-3xl font-semibold tracking-tight">248</div>
-        </Card>
+      <div
+        onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+        onDragLeave={() => setDrag(false)}
+        onDrop={(e) => { e.preventDefault(); setDrag(false); doUpload(e.dataTransfer.files?.[0]); }}
+        className={cn(
+          "mb-6 flex items-center justify-center gap-3 rounded-xl border border-dashed px-4 py-5 text-sm text-muted-foreground transition",
+          drag ? "border-primary bg-primary/5 text-primary" : "border-border",
+        )}
+      >
+        <FileText className="h-4 w-4" /> Drop any regulator circular PDF here (SEBI, RBI, IRDAI…). It is analysed on this machine.
+      </div>
 
-        <Card className="rounded-2xl p-5">
-          <div className="mb-6 flex items-center justify-between bg-card">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-              <TriangleAlert className="h-4 w-4" />
-            </div>
-            <StatusPill tone="danger">CRITICAL</StatusPill>
-          </div>
-          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            High Risk Flags
-          </div>
-          <div className="mt-1 text-3xl font-semibold tracking-tight">14</div>
-        </Card>
-
-        <Card className="rounded-2xl p-5">
-          <div className="flex items-center justify-between bg-card">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              Ingestion Pipeline Status
-            </div>
-            <div className="text-right text-xs">
-              <div className="font-medium text-success">Active</div>
-              <div className="text-muted-foreground">Last sync 2m ago</div>
-            </div>
-          </div>
-          <div className="mt-5 flex h-16 items-end gap-1.5">
-            {[40, 60, 90, 50, 70, 80, 55, 40, 65, 70, 60, 55].map((h, i) => (
-              <div
-                key={i}
-                className={
-                  "flex-1 rounded-sm " +
-                  (i === 2 ? "bg-primary" : "bg-primary/25")
-                }
-                style={{ height: `${h}%` }}
-              />
-            ))}
-          </div>
-        </Card>
-      </section>
-
-      {/* Table */}
-      <Card className="mt-8 overflow-hidden rounded-2xl p-0 bg-card">
-        <div className="flex items-center justify-between border-b border-border px-6 pt-4">
-          <div className="flex gap-6">
-            {TABS.map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={
-                  "relative pb-3 text-sm font-medium transition " +
-                  (t === tab ? "text-foreground" : "text-muted-foreground hover:text-foreground")
-                }
-              >
-                {t}
-                {t === tab && (
-                  <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-primary" />
-                )}
-              </button>
-            ))}
-          </div>
-          <div className="pb-3 text-xs text-muted-foreground">
-            Showing 1–{filtered.length} of 248 entries
-          </div>
-        </div>
-        <table className="w-full text-sm bg-card">
-          <thead>
-            <tr className="bg-surface-2/60 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-              <th className="px-6 py-3">Received</th>
-              <th className="px-6 py-3">Source</th>
-              <th className="px-6 py-3">Subject</th>
-              <th className="px-6 py-3">Processing</th>
-              <th className="px-6 py-3">Risk</th>
-              <th className="px-6 py-3">Owner</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((c) => {
-              const isDemo = c.id === "c-demo";
-              return (
-                <tr
-                  key={c.id}
-                  onClick={() => {
-                    if (isDemo) {
-                      navigate({ to: "/workspace" });
-                    }
-                  }}
-                  className={`border-t border-border transition-colors hover:bg-surface-2/60 ${isDemo ? "bg-amber-500/[0.02] cursor-pointer" : "cursor-pointer"}`}
-                >
-                  <td className="whitespace-nowrap px-6 py-4 text-muted-foreground">
-                    {formatDateTime(c.receivedAt)}
-                  </td>
-                  <td className="px-6 py-4">
-                    <StatusPill tone={isDemo ? "brand" : "neutral"}>{c.source}</StatusPill>
-                  </td>
-                  <td className="max-w-[420px] px-6 py-4">
-                    <div className="flex items-center gap-2 font-medium text-foreground">
-                      {c.title}
-                      {isDemo && (
-                        <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-amber-600 dark:text-amber-400">
-                          DEMO
-                        </span>
-                      )}
-                    </div>
-                    {isDemo ? (
-                      <div className="mt-1.5 space-y-1">
-                        <div className="text-xs text-muted-foreground font-semibold">
-                          Circular No: <span className="font-mono text-foreground font-medium">{c.reference}</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          Published: <span className="text-foreground font-medium">14 July 2026</span> &middot; Effective: <span className="text-foreground font-medium font-mono">1 Oct 2026</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
-                          Applicability: 
-                          <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-                            Applicable to Stockbrokers
-                          </span>
-                        </div>
-                        <div className="mt-2.5">
-                          <Button 
-                            size="sm" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate({ to: "/workspace" });
-                            }}
-                            className="h-7 text-xs font-semibold gap-1 bg-primary/15 hover:bg-primary/25 text-primary border-none cursor-pointer px-3 rounded-md"
-                          >
-                            Review Analysis <ArrowRight className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="mt-0.5 text-xs text-muted-foreground flex items-center gap-2">
-                        <span className="truncate max-w-[280px]">{c.summary}</span>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="h-6 text-[10px] px-2 py-0 cursor-pointer border-primary/20 text-primary hover:bg-primary/5"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            startPipeline(c.id);
-                          }}
-                        >
-                          <Play className="h-3 w-3 mr-1" /> Run Pipeline
-                        </Button>
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    <StatusPill
-                      tone={
-                        c.processingStatus === "Analyzing"
-                          ? "info"
-                          : c.processingStatus === "Flagged"
-                            ? "warning"
-                            : "success"
-                      }
-                      dot
-                    >
-                      {c.processingStatus}
-                    </StatusPill>
-                  </td>
-                  <td className="px-6 py-4">
-                    <StatusPill tone={riskTone(c.risk)}>{c.risk}</StatusPill>
-                  </td>
-                  <td className="px-6 py-4 text-muted-foreground">{c.owner ?? "—"}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </Card>
-
-      <section className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
-        <Card className="relative overflow-hidden rounded-2xl border-transparent bg-primary p-6 text-primary-foreground">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <Sparkles className="h-4 w-4" /> SERA Intelligence Insight
-          </div>
-          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-primary-foreground/85">
-            Our AI analysis suggests the recent{" "}
-            <span className="font-semibold text-primary-foreground underline decoration-primary-foreground/40 underline-offset-2">
-              SEBI amendment on Portfolio Managers
-            </span>{" "}
-            has a 92% correlation with your current institutional reporting workflows. Immediate
-            review is recommended to avoid Q4 compliance discrepancies.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-2">
-            <Link
-              to="/impact-map"
-              className="rounded-md bg-primary-foreground px-4 py-2 text-sm font-medium text-primary hover:opacity-90"
-            >
-              Go to Impact Map
-            </Link>
-            <button className="rounded-md border border-primary-foreground/30 px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-foreground/10">
-              Acknowledge Alert
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="flex gap-1 rounded-full border border-border bg-surface p-1">
+          {FILTERS.map((f) => (
+            <button key={f.key} onClick={() => setFilter(f.key)} className={cn("rounded-full px-3 py-1 text-xs font-medium", filter === f.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
+              {f.label}
+              <span className="ml-1 opacity-70">{(data ?? []).filter((c) => matches(c, f.key)).length}</span>
             </button>
-          </div>
-        </Card>
-
-        <Card className="rounded-2xl p-6">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            Recent Activity
-          </div>
-          <div className="mt-4 space-y-4 text-sm">
-            <ActivityLine tone="success" title="Analysis Completed" detail="RBI Master Circular v.2.4" when="12 min ago" />
-            <ActivityLine tone="info" title="Draft Generated" detail="Compliance response for SEBI-042" when="2 hours ago" />
-            <ActivityLine tone="danger" title="User Flag Added" detail="Marked as critical by S. Gupta" when="4 hours ago" />
-          </div>
-        </Card>
-      </section>
-    </AppShell>
-  );
-}
-
-function ActivityLine({
-  tone,
-  title,
-  detail,
-  when,
-}: {
-  tone: "success" | "info" | "danger";
-  title: string;
-  detail: string;
-  when: string;
-}) {
-  const color =
-    tone === "success" ? "bg-success" : tone === "info" ? "bg-info" : "bg-destructive";
-  return (
-    <div className="flex gap-3 border-l-2 pl-3" style={{ borderColor: "var(--color-border)" }}>
-      <div className={`mt-1.5 h-1.5 w-1.5 rounded-full ${color}`} />
-      <div className="min-w-0">
-        <div className="font-medium text-foreground">{title}</div>
-        <div className="text-xs text-muted-foreground">{detail}</div>
-        <div className="mt-0.5 text-[11px] uppercase tracking-wide text-muted-foreground/70">
-          {when}
+          ))}
+        </div>
+        <div className="relative ml-auto w-72">
+          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filter by title or reference" className="h-9 w-full rounded-full border border-border bg-surface pl-8 pr-3 text-sm outline-none focus:border-primary" />
         </div>
       </div>
-    </div>
+
+      {error && <ErrorBox error={error} />}
+      {isLoading && <Loading />}
+      {data && rows.length === 0 && (
+        <EmptyState icon={<FileText className="h-5 w-5" />} title="No circulars here" description="Upload a PDF or sync from SEBI to get started." />
+      )}
+      <div className="space-y-3">
+        {rows.map((c) => {
+          const canAnalyze = ["created", "failed", "changes_requested", "needs_ocr"].includes(c.status);
+          return (
+            <Card key={c.id} className="rounded-xl p-5 transition hover:border-primary/30">
+              <div className="flex flex-wrap items-start gap-4">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                    <StatusPill tone="info">{c.source}</StatusPill>
+                    <span className="font-mono">{c.reference}</span>
+                    <span>· issued {fmtDate(c.issue_date)}</span>
+                    {c.origin === "upload" && <StatusPill>Uploaded</StatusPill>}
+                  </div>
+                  <button onClick={() => open(c)} className="mt-1.5 text-left text-[15px] font-semibold leading-snug hover:text-primary">{c.title}</button>
+                  {c.summary && <p className="mt-1.5 line-clamp-2 text-sm text-muted-foreground">{c.summary}</p>}
+                  {c.status === "needs_ocr" && <p className="mt-1.5 text-sm text-destructive">Scanned PDF without a text layer. SERA does not guess, so upload a searchable version.</p>}
+                  {c.status === "failed" && <p className="mt-1.5 text-sm text-destructive">{c.error}</p>}
+                  {(c.status === "in_analysis" || c.status === "planning") && (
+                    <div className="mt-3 h-1 w-64 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary transition-all" style={{ width: `${c.progress}%` }} /></div>
+                  )}
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <div className="flex items-center gap-2">
+                    {c.status !== "created" && <RiskPill risk={c.risk} />}
+                    <WfStatusPill status={c.status} />
+                  </div>
+                  {c.obligation_count > 0 && <div className="text-xs text-muted-foreground">{c.obligation_count} obligation(s) · {providerLabel(c.provider)}</div>}
+                  <div className="flex gap-2">
+                    {c.has_pdf && (
+                      <Button size="sm" variant="ghost" asChild>
+                        <a href={sera.pdfUrl(c.id)} target="_blank" rel="noreferrer"><ExternalLink className="mr-1 h-3.5 w-3.5" />PDF</a>
+                      </Button>
+                    )}
+                    {canAnalyze ? (
+                      <Button size="sm" disabled={!c.has_pdf || analyze.isPending} onClick={() => { if (c.workflow_id) setActiveWorkflow(c.workflow_id); analyze.mutate(c.id, { onSuccess: () => toast.success("Analysis started"), onError: (e) => toast.error(e.message) }); }}>
+                        <Play className="mr-1 h-3.5 w-3.5" /> Analyse
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="outline" onClick={() => open(c)}>
+                        Open <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    </AppShell>
   );
 }

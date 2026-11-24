@@ -25,7 +25,7 @@ from sqlalchemy import (
     Enum as SAEnum,
     Index,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
 from app.core.db import Base
@@ -103,6 +103,13 @@ class Task(Base):
 
     # What evidence must be submitted when the task is marked complete
     evidence_requirement = Column(Text, nullable=True)
+
+    department = Column(String(120), nullable=True)
+    assignee = Column(String(120), nullable=True)
+    phase = Column(String(60), nullable=True)
+    evidence_note = Column(Text, nullable=True)
+    evidence_files = Column(JSONB, nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
 
     # iCalendar RRULE string for recurring tasks, e.g. "FREQ=MONTHLY;BYMONTHDAY=15"
     recurrence_rule = Column(String(255), nullable=True)

@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import Column, String, DateTime, Text, Enum as SAEnum, Index
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
 from app.core.db import Base
@@ -58,6 +58,15 @@ class RegulatoryDocument(Base):
 
     # Relative or absolute URL to the detail page / PDF
     file_ref = Column(Text, nullable=True, comment="PDF or detail page URL")
+
+    source = Column(String(20), nullable=False, default="SEBI")
+    summary = Column(Text, nullable=True)
+    risk = Column(String(20), nullable=True)
+    pdf_url = Column(Text, nullable=True)
+    local_path = Column(Text, nullable=True)
+    origin = Column(String(20), nullable=False, default="scraped")  # scraped | upload | seed
+    text_hash = Column(String(64), nullable=True)
+    analysis_meta = Column(JSONB, nullable=True)
 
     # Status of embedding generation for this document (future: pgvector)
     embedding_status = Column(

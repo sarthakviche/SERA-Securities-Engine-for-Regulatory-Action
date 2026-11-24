@@ -17,14 +17,17 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info(f"Starting up {settings.APP_NAME}")
 
-    # Initialize LangGraph Postgres Checkpointer tables
+    # Seed: register any circular PDFs already on disk so a fresh install has data
     try:
-        from app.ai.graph.checkpointer import get_checkpointer
-        checkpointer = get_checkpointer()
-        await checkpointer.setup()
-        logger.info("LangGraph checkpointer tables ready.")
+        from app.core.db import AsyncSessionLocal
+        from app.engine import service as engine_service
+        async with AsyncSessionLocal() as db:
+            await engine_service.get_org(db)
+            added = await engine_service.seed_local_pdfs(db)
+            await db.commit()
+        logger.info(f"SERA engine ready ({added} new circular(s) registered from downloads/).")
     except Exception as e:
-        logger.warning(f"Checkpointer setup skipped (no DB?): {e}")
+        logger.warning(f"Seeding skipped (is Postgres running?): {e}")
 
     # Configure Resend email service
     try:
@@ -85,6 +88,9 @@ def create_app() -> FastAPI:
 
     from app.modules.notifications.router import router as notifications_router
     app.include_router(notifications_router)
+
+    from app.api_v2.router import router as v2_router
+    app.include_router(v2_router)
 
     @app.get("/")
     async def root():

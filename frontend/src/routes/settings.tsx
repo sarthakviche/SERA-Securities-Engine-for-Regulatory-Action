@@ -17,6 +17,9 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { Link } from "@tanstack/react-router";
+import { Input } from "@/components/ui/input";
+import { providerLabel, useMeta } from "@/lib/sera";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/settings")({
@@ -24,7 +27,7 @@ export const Route = createFileRoute("/settings")({
   component: Settings,
 });
 
-type SettingsTab = "Organization" | "Team & Roles" | "Security" | "Notifications";
+type SettingsTab = "Organization" | "Identity" | "AI Engine" | "Notifications";
 
 function Settings() {
   const { theme, toggle } = useTheme();
@@ -42,8 +45,8 @@ function Settings() {
           {(
             [
               { icon: Building2, label: "Organization" },
-              { icon: Users, label: "Team & Roles" },
-              { icon: KeyRound, label: "Security" },
+              { icon: Users, label: "Identity" },
+              { icon: KeyRound, label: "AI Engine" },
               { icon: Bell, label: "Notifications" },
             ] as { icon: React.ElementType; label: SettingsTab }[]
           ).map((s) => {
@@ -103,31 +106,14 @@ function Settings() {
                 </div>
               </Card>
 
-              <Card className="rounded-2xl p-6">
-                <div className="text-sm font-semibold">Organization</div>
-                <div className="mt-4 grid gap-4 md:grid-cols-2">
-                  <Field label="Organization Name" value="Capital Horizons Ltd" />
-                  <Field label="Intermediary Type" value="SEBI Stock Broker" />
-                  <Field label="Primary Jurisdiction" value="India" />
-                  <Field label="Employees" value="500+" />
-                </div>
-                <div className="mt-6 flex justify-end">
-                  <Button>Save changes</Button>
-                </div>
-              </Card>
+              <OrgCard />
             </>
           )}
 
           {activeTab === "Notifications" && <NotificationsTab />}
 
-          {(activeTab === "Team & Roles" || activeTab === "Security") && (
-            <Card className="rounded-2xl p-6">
-              <div className="text-sm font-semibold">{activeTab}</div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                This section is coming soon.
-              </p>
-            </Card>
-          )}
+          {activeTab === "Identity" && <IdentityCard />}
+          {activeTab === "AI Engine" && <EngineCard />}
         </div>
       </div>
     </AppShell>
@@ -277,5 +263,55 @@ function Field({ label, value }: { label: string; value: string }) {
         className="mt-1 h-10 w-full rounded-md border border-border bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
       />
     </label>
+  );
+}
+
+function OrgCard() {
+  const { data } = useMeta();
+  const labels = Object.fromEntries((data?.entity_types ?? []).map((e) => [e.key, e.label]));
+  return (
+    <Card className="rounded-2xl p-6">
+      <div className="text-sm font-semibold">Organization profile</div>
+      <p className="mt-1 text-xs text-muted-foreground">Drives applicability (which obligations apply to you) and impact mapping.</p>
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <Field label="Organization Name" value={data?.org.name ?? "-"} />
+        <Field label="Registered as" value={(data?.org.entity_types ?? []).map((e) => labels[e] ?? e).join(", ") || "-"} />
+        <Field label="Departments" value={`${data?.org.departments.length ?? 0} configured`} />
+        <Field label="Systems" value={`${data?.org.systems.length ?? 0} configured`} />
+      </div>
+      <div className="mt-6 flex justify-end">
+        <Button asChild><Link to="/onboarding">Edit profile</Link></Button>
+      </div>
+    </Card>
+  );
+}
+
+function IdentityCard() {
+  const [name, setName] = useState("");
+  useEffect(() => setName(localStorage.getItem("sera-actor") || "Compliance Officer"), []);
+  return (
+    <Card className="rounded-2xl p-6">
+      <div className="text-sm font-semibold">Acting as</div>
+      <p className="mt-1 text-xs text-muted-foreground">Recorded against approvals, task updates and evidence in the audit trail. This local build has no login.</p>
+      <div className="mt-4 flex max-w-md gap-2">
+        <Input value={name} onChange={(e) => setName(e.target.value)} />
+        <Button onClick={() => { localStorage.setItem("sera-actor", name.trim() || "Compliance Officer"); toast.success("Saved"); }}>Save</Button>
+      </div>
+    </Card>
+  );
+}
+
+function EngineCard() {
+  const { data } = useMeta();
+  return (
+    <Card className="rounded-2xl p-6 text-sm">
+      <div className="font-semibold">Analysis engine</div>
+      <div className="mt-2 text-2xl font-semibold">{providerLabel(data?.provider)}</div>
+      <p className="mt-3 text-muted-foreground">
+        SERA always runs its deterministic, citation-verified engine locally. Add <code className="rounded bg-muted px-1">ANTHROPIC_API_KEY</code> (Claude) or{" "}
+        <code className="rounded bg-muted px-1">GROQ_API_KEY</code> to <code className="rounded bg-muted px-1">backend/.env</code> and restart. The LLM then proposes obligations,
+        and SERA only accepts those whose quoted text is found verbatim in the circular.
+      </p>
+    </Card>
   );
 }

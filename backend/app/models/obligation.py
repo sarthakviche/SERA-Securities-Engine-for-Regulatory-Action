@@ -25,8 +25,11 @@ from sqlalchemy import (
     ForeignKey,
     Enum as SAEnum,
     Index,
+    Integer,
+    Date,
+    Boolean,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
 from app.core.db import Base
@@ -82,6 +85,21 @@ class Obligation(Base):
         nullable=False,
         default="pending",
     )
+
+    code = Column(String(40), nullable=True)
+    clause_ref = Column(String(120), nullable=True)
+    source_text = Column(Text, nullable=True)
+    page_number = Column(Integer, nullable=True)
+    deadline = Column(String(120), nullable=True)
+    due_date = Column(Date, nullable=True)
+    department = Column(String(120), nullable=True)
+    owner = Column(String(120), nullable=True)
+    risk = Column(String(20), nullable=True)
+    applicable = Column(Boolean, nullable=False, default=True)
+    applicability_reason = Column(Text, nullable=True)
+    ambiguity = Column(JSONB, nullable=True)
+    impact = Column(JSONB, nullable=True)
+    excluded = Column(Boolean, nullable=False, default=False)
 
     # LLM extraction confidence (0.0 – 1.0), null until LLM stage runs
     confidence_score = Column(Float, nullable=True)
