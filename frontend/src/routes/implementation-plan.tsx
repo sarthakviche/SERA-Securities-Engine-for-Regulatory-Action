@@ -1,381 +1,161 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
+import { ArrowRight, Check, FileText, Loader2, RotateCcw, ShieldCheck, Workflow } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/sera/app-shell";
 import { PageHeader } from "@/components/sera/page-header";
 import { StatusPill } from "@/components/sera/status-pill";
-import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/sera/empty-state";
 import { Button } from "@/components/ui/button";
-import { useDemo } from "@/lib/demo";
-import type { TaskStatus } from "@/lib/types";
-import { Plus, MoreHorizontal, FileText, CheckCircle2, ChevronRight, ArrowRight, Loader2 } from "lucide-react";
-import { formatDate } from "@/lib/format";
-import { toast } from "sonner";
-import { useWorkflow } from "@/hooks/useWorkflow";
-import { api } from "@/lib/api";
-import { useEffect, useState } from "react";
-import { AgentStatusBanner } from "@/components/sera/agent-status-banner";
-import { SOPDiffCard } from "@/components/sera/sop-diff-card";
+import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ErrorBox, Loading, NoCircular, RiskPill, SectionTitle, StageStepper, WorkflowPicker } from "@/components/sera/bits";
+import { fmtDate, sera, useActiveWorkflow, useSeraMutation, useWorkflow } from "@/lib/sera";
 
 export const Route = createFileRoute("/implementation-plan")({
   head: () => ({ meta: [{ title: "Implementation Plan · SERA" }] }),
-  component: PlanPage,
+  component: Plan,
 });
 
-const LANES: TaskStatus[] = ["Todo", "In Progress", "Review", "Done"];
-
-function PlanPage() {
-  const { demoStage, setDemoStage, tasks, obligations, isDemoActive, workflowId } = useDemo();
-  const navigate = useNavigate();
-  const { data: workflowStatus } = useWorkflow(workflowId);
-  
+function Plan() {
+  const [wfId, setWf, circulars] = useActiveWorkflow();
+  const { data: wf, error, isLoading } = useWorkflow(wfId);
   const [comment, setComment] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [sopDrafts, setSopDrafts] = useState<any[]>([]);
-  const [agentTasks, setAgentTasks] = useState<any[]>([]);
+  const [rejecting, setRejecting] = useState(false);
+  const gate = useSeraMutation((d: "approved" | "rejected") => sera.gate(wfId!, "gate_2", d, comment || undefined));
+  const pending = wf?.status === "pending_approval_2";
 
-  useEffect(() => {
-    // If agent is done mapping, fetch its output
-    if (workflowId && workflowStatus && workflowStatus.current_stage !== "impact_mapping" && workflowStatus.current_stage !== "planning") {
-      api.getAgentOutput(workflowId, "sop_generation_agent")
-        .then((output) => {
-          if (output && output.sop_drafts) {
-            setSopDrafts(output.sop_drafts);
-          }
-        })
-        .catch(console.error);
-        
-      api.getAgentOutput(workflowId, "evidence_implementation_plan_agent")
-        .then((output) => {
-          if (output && output.tasks) {
-            setAgentTasks(output.tasks);
-          }
-        })
-        .catch(console.error);
-    }
-  }, [workflowId, workflowStatus]);
+  return (
+    <AppShell>
+      <PageHeader
+        eyebrow="Planning · Gate 2"
+        title="Implementation Plan"
+        description="SOP amendments and a phased, owner-assigned task plan generated from the approved obligations. Department heads approve before tasks go live."
+        actions={<WorkflowPicker value={wfId} onChange={setWf} circulars={circulars} />}
+      />
+      {!wfId && circulars && <NoCircular />}
+      {error && <ErrorBox error={error} />}
+      {isLoading && <Loading />}
+      {wf && !wf.plan && (
+        <EmptyState icon={<Workflow className="h-5 w-5" />} title="No plan yet" description="Approve the interpretation at Gate 1 to generate the plan." action={<Button asChild><Link to="/workspace">Go to Workspace</Link></Button>} />
+      )}
+      {wf && wf.plan && (
+        <>
+          <Card className="mb-6 rounded-2xl p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="font-semibold">{wf.circular.title}</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">
+                  Plan starts {fmtDate(wf.plan.start_date)} · {wf.plan.tasks.length} tasks · {wf.sops?.length ?? 0} SOP changes
+                  {wf.plan_revision > 0 && ` · revision ${wf.plan_revision}`}
+                </div>
+              </div>
+              <StageStepper status={wf.status} />
+            </div>
+            {wf.plan.feedback_applied && (
+              <div className="mt-3 rounded-lg bg-info/10 px-3 py-2 text-[13px] text-info">
+                <RotateCcw className="mr-1 inline h-3.5 w-3.5" /> Regenerated after reviewer feedback: "{wf.plan.feedback_applied}"
+              </div>
+            )}
+          </Card>
 
-  const handleGate2 = async (decision: "approved" | "rejected") => {
-    if (!workflowId) {
-      if (decision === "approved") {
-        setDemoStage("PLAN_APPROVED");
-        toast.success("Execution Initiated", { description: "Tasks are being created in the tracker." });
-        navigate({ to: "/implementation-tracker" });
-      }
-      return;
-    }
+          <Tabs defaultValue="plan">
+            <TabsList>
+              <TabsTrigger value="plan">Task plan</TabsTrigger>
+              <TabsTrigger value="sops">SOP amendments ({wf.sops?.length ?? 0})</TabsTrigger>
+            </TabsList>
+            <TabsContent value="plan" className="mt-4 space-y-6">
+              {wf.plan.phases.map((ph) => {
+                const tasks = wf.plan!.tasks.filter((t) => t.phase === ph.name);
+                if (!tasks.length) return null;
+                return (
+                  <div key={ph.name}>
+                    <SectionTitle right={<span className="text-xs text-muted-foreground">{ph.description}</span>}>{ph.name} · {tasks.length}</SectionTitle>
+                    <Card className="overflow-hidden rounded-2xl p-0">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-surface-2/60 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                            <th className="px-5 py-2.5">Task</th><th className="px-3 py-2.5">Owner</th><th className="px-3 py-2.5">Due</th><th className="px-3 py-2.5">Priority</th><th className="px-5 py-2.5">Evidence</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {tasks.map((t, i) => (
+                            <tr key={i} className="border-t border-border align-top">
+                              <td className="px-5 py-3"><div className="font-medium">{t.title}</div><div className="font-mono text-[10px] text-muted-foreground">{t.obligation_code}</div></td>
+                              <td className="px-3 py-3">{t.department}</td>
+                              <td className="whitespace-nowrap px-3 py-3">{fmtDate(t.due_date)}</td>
+                              <td className="px-3 py-3"><RiskPill risk={t.priority} /></td>
+                              <td className="px-5 py-3 text-muted-foreground">{t.evidence_requirement ?? "-"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </Card>
+                  </div>
+                );
+              })}
+            </TabsContent>
+            <TabsContent value="sops" className="mt-4 space-y-4">
+              {(wf.sops ?? []).map((s, i) => (
+                <Card key={i} className="rounded-2xl p-5">
+                  <div className="flex items-center gap-3 border-b border-border pb-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-2"><FileText className="h-4 w-4 text-muted-foreground" /></span>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold">{s.sop_title}</div>
+                      <div className="text-[11px] text-muted-foreground">{s.citation} · {s.obligation_code}</div>
+                    </div>
+                    <StatusPill tone={s.change_type === "Add" ? "brand" : "warning"}>{s.change_type === "Add" ? "New section" : "Amendment"}</StatusPill>
+                  </div>
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    <div className="rounded-xl border border-border bg-surface-2 p-4">
+                      <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">Current</div>
+                      <div className="text-xs italic text-muted-foreground">{s.current_text}</div>
+                    </div>
+                    <div className="rounded-xl border border-primary/25 bg-primary/5 p-4">
+                      <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.15em] text-primary">Proposed</div>
+                      <div className="whitespace-pre-line text-xs leading-relaxed">{s.proposed_text}</div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </TabsContent>
+          </Tabs>
 
-    setIsSubmitting(true);
-    try {
-      await api.submitGate(workflowId, "gate_2", decision, comment || undefined);
-      if (decision === "approved") {
-        setDemoStage("PLAN_APPROVED");
-        toast.success("Execution Initiated", { description: "Tasks are being created in the tracker." });
-        navigate({ to: "/implementation-tracker" });
-      } else {
-        toast.info("Returned for Revision", { description: "The AI will revise the SOP drafts." });
-        setComment("");
-      }
-    } catch (e) {
-      toast.error("Failed to submit decision. Please retry.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const isPlanning = workflowStatus?.current_stage === "planning" || workflowStatus?.current_stage === "impact_mapping";
-
-  // Render rich demo plan if demo mode is active
-  if (isDemoActive) {
-    return (
-      <AppShell>
-        <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
-          <Link to="/" className="hover:text-foreground">Workspace</Link>
-          <span>/</span>
-          <span className="text-foreground">Implementation Plan</span>
-        </div>
-
-        <PageHeader
-          title="Implementation Plan"
-          description="Fictional Circular SEBI/HO/MIRSD/2026/104: Core Action Plan & SOP Amendment Draft"
-          actions={
-            <>
-              {isDemoActive && !workflowId && (
-                <span className="mr-2 inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                  Demo Action Plan
-                </span>
-              )}
-              {workflowStatus?.status === "executing" ? (
-                <Button variant="outline" onClick={() => navigate({ to: "/implementation-tracker" })} className="gap-2 cursor-pointer">
-                  Tracker View <ChevronRight className="h-4 w-4" />
-                </Button>
-              ) : null}
-            </>
-          }
-        />
-
-        {isPlanning && (
-          <AgentStatusBanner
-            icon={<Loader2 className="animate-spin" />}
-            message="SERA is drafting SOP amendments and implementation tasks..."
-            subtext="Generating specific, tailored tasks based on impact mapping."
-          />
-        )}
-        
-        {workflowStatus?.status === "executing" && (
-           <AgentStatusBanner
-            icon={<Loader2 className="animate-spin" />}
-            message="Finalizing compliance actions..."
-            subtext="Creating tasks, updating SOPs."
-          />
-        )}
-
-        <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-          {/* Main Content Area */}
-          <div className="space-y-6 relative">
-             {isPlanning && (
-               <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px] rounded-2xl flex items-center justify-center z-10" />
-             )}
-             
-            {/* Task list card */}
-            <Card className="rounded-2xl p-6 bg-card border-border">
-              <h3 className="text-sm font-semibold text-foreground border-b border-border pb-3 mb-4 flex items-center gap-2">
-                <FileText className="h-4 w-4 text-primary" /> Proposed Implementation Tasks ({agentTasks.length || 7})
-              </h3>
-              <div className="space-y-3.5">
-                {agentTasks.length > 0 ? (
-                  agentTasks.map((t, idx) => (
-                    <TaskListItem key={idx} owner={t.assignee || "Unassigned"} title={t.title} desc={t.description || ""} due={t.due_date || "TBD"} />
-                  ))
+          {pending ? (
+            <Card className="sticky bottom-4 z-20 mt-6 rounded-2xl border-primary/30 p-5 shadow-xl">
+              <div className="flex flex-wrap items-center gap-4">
+                <ShieldCheck className="h-5 w-5 text-primary" />
+                <div className="min-w-0 flex-1 text-sm">
+                  <div className="font-semibold">Gate 2: approve the SOPs and task plan?</div>
+                  <div className="text-muted-foreground">Approval creates {wf.plan.tasks.length} tracked tasks with owners, due dates and evidence requirements. Rejecting regenerates the plan using your feedback.</div>
+                </div>
+                {rejecting ? (
+                  <div className="flex w-full items-end gap-2 md:w-auto">
+                    <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Feedback for the revised plan" className="min-h-[40px] md:w-80" />
+                    <Button variant="destructive" disabled={!comment.trim() || gate.isPending} onClick={() => gate.mutate("rejected", { onSuccess: () => { toast("Plan regenerated with your feedback"); setRejecting(false); setComment(""); }, onError: (e) => toast.error(e.message) })}>Request changes</Button>
+                    <Button variant="ghost" onClick={() => setRejecting(false)}>Cancel</Button>
+                  </div>
                 ) : (
                   <>
-                    <TaskListItem owner="IT Services" title="Change re-verification scheduler from 24 months to 12 months" desc="Update cron parameters in CRM client profile updater." due="15 Sep 2026" />
-                    <TaskListItem owner="IT Services" title="Implement or configure authenticated OTP verification" desc="Integrate SMS gateway provider with Mobile Client app & login flow." due="20 Sep 2026" />
-                    <TaskListItem owner="IT Services" title="Store verification timestamp and verification outcome" desc="Create database schema migrations for verification logging." due="22 Sep 2026" />
-                    <TaskListItem owner="Operations" title="Update the Client Mobile Verification SOP" desc="Rewrite SOP-KYC-01 to reflect the 12-month re-verification mandate." due="01 Sep 2026" />
-                    <TaskListItem owner="Customer Operations" title="Prepare customer reminder and escalation workflow" desc="Draft notification email templates and CRM agent call desk guides." due="25 Sep 2026" />
-                    <TaskListItem owner="Compliance" title="Validate implementation against the approved obligation" desc="Human assessment of technical logs, QA reports and signed SOP." due="30 Sep 2026" />
-                    <TaskListItem owner="QA Team" title="Test the end-to-end re-verification workflow" desc="Run regression tests on Mobile App OTP flow and database logs." due="28 Sep 2026" />
+                    <Button variant="outline" onClick={() => setRejecting(true)}>Request changes</Button>
+                    <Button disabled={gate.isPending} onClick={() => gate.mutate("approved", { onSuccess: () => toast.success("Plan approved. Tasks are live in the tracker."), onError: (e) => toast.error(e.message) })}>
+                      {gate.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Check className="mr-1.5 h-4 w-4" />} Approve plan
+                    </Button>
                   </>
                 )}
               </div>
             </Card>
-
-            {/* SOP Diff card */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-foreground pb-1">
-                Proposed SOP Amendment Drafts
-              </h3>
-              {sopDrafts.length > 0 ? (
-                sopDrafts.map((d, idx) => (
-                  <SOPDiffCard
-                    key={idx}
-                    title={d.document_title || "New Document"}
-                    departmentName={d.department || "Organization"}
-                    isNewSop={!d.existing_content}
-                    previousContent={d.existing_content}
-                    newContent={d.proposed_content}
-                  />
-                ))
-              ) : (
-                <Card className="rounded-2xl p-6 bg-card border-border">
-                  <div className="rounded-xl border border-border bg-surface font-mono text-[11px] leading-relaxed overflow-hidden">
-                    <div className="bg-surface-2 px-4 py-2 border-b border-border text-muted-foreground flex justify-between">
-                      <span>SOP-KYC-01 Section 4.2</span>
-                      <span>Unified Diff</span>
-                    </div>
-                    <div className="p-4 space-y-1.5">
-                      <div className="text-muted-foreground">@@ -18,4 +18,4 @@</div>
-                      <div className="bg-destructive/10 text-destructive px-2 py-1 rounded flex items-start gap-1">
-                        <span className="select-none font-bold">-</span>
-                        <span>“Registered mobile numbers shall be periodically re-verified every 24 months.”</span>
-                      </div>
-                      <div className="bg-success/10 text-success px-2 py-1 rounded flex items-start gap-1">
-                        <span className="select-none font-bold">+</span>
-                        <span>“Registered mobile numbers shall be periodically re-verified every 12 months through the approved authenticated verification workflow.”</span>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              )}
-            </div>
-          </div>
-
-          {/* Sidebar Area */}
-          <div className="space-y-6">
-            {/* Evidence Requirements */}
-            <Card className="rounded-2xl p-5 bg-card border-border">
-              <h3 className="text-sm font-semibold text-foreground border-b border-border pb-3 mb-4">
-                Required Evidence Plan
-              </h3>
-              <ul className="space-y-3 text-xs leading-normal">
-                <EvidenceItem title="Approved SOP Document" desc="Signed SOP-KYC-01 v2.0 PDF" />
-                <EvidenceItem title="Deployment Record" desc="Production build config change log" />
-                <EvidenceItem title="QA Test Report" desc="End-to-end OTP workflow run record" />
-                <EvidenceItem title="Sample Verification Logs" desc="Anonymized db verification log entries" />
-                <EvidenceItem title="System Configuration Evidence" desc="Mobile app SMS gateway configuration parameters" />
-                <EvidenceItem title="Compliance Sign-off" desc="Human audit attestation checklist sealed" />
-              </ul>
-            </Card>
-
-            {/* Approval CTA Card */}
-            {(workflowStatus?.status === "pending_approval_2" || (!workflowId && demoStage === "IMPACT_MAPPED")) && (
-              <Card className="rounded-2xl p-5 border-amber-500/20 bg-amber-500/5 flex flex-col justify-between min-h-[180px]">
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground">Gate 2: Department Head Approval Required</h3>
-                  <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-                    Review the SOP amendments and implementation tasks above, then approve or return for revision.
-                  </p>
-                </div>
-  
-                <div className="mt-4 space-y-3">
-                  <Textarea
-                    placeholder="Optional comment (required if rejecting)"
-                    value={comment}
-                    onChange={e => setComment(e.target.value)}
-                    className="text-xs"
-                    disabled={isSubmitting}
-                  />
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => handleGate2("rejected")}
-                      disabled={!comment || isSubmitting}
-                      className="flex-1 text-xs cursor-pointer"
-                    >
-                      {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-                      Return for Revision
-                    </Button>
-                    <Button
-                      onClick={() => handleGate2("approved")}
-                      disabled={isSubmitting}
-                      className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 text-xs cursor-pointer"
-                    >
-                      {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-                      Approve & Initiate
-                    </Button>
-                  </div>
-                </div>
+          ) : (
+            wf.approvals.gate_2?.decision === "approved" && (
+              <Card className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl p-5 text-sm">
+                <div><StatusPill tone="success">Gate 2 approved</StatusPill><span className="ml-2 text-muted-foreground">by {wf.approvals.gate_2.by} · {fmtDate(wf.approvals.gate_2.at)}</span></div>
+                <Button asChild size="sm"><Link to="/implementation-tracker">Track implementation <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
               </Card>
-            )}
-            
-            {workflowStatus?.status === "executing" && (
-                <Card className="rounded-2xl p-5 border-transparent bg-[oklch(0.22_0.06_145)] text-[oklch(0.95_0.02_90)] flex flex-col justify-between min-h-[180px]">
-                   <div className="space-y-2">
-                    <div className="text-center text-xs font-bold text-emerald-300 flex items-center justify-center gap-1.5 py-1.5 bg-white/10 rounded-lg">
-                      <CheckCircle2 className="h-4 w-4" /> Plan Approved
-                    </div>
-                    <Button
-                      variant="ghost"
-                      onClick={() => navigate({ to: "/implementation-tracker" })}
-                      className="w-full text-white/80 hover:text-white hover:bg-white/10 text-xs font-medium cursor-pointer"
-                    >
-                      View Live Tracker Tasks
-                    </Button>
-                  </div>
-                </Card>
-            )}
-          </div>
-        </div>
-      </AppShell>
-    );
-  }
-
-  // Kanban view (default baseline mockup)
-  return (
-    <AppShell>
-      <PageHeader
-        title="Implementation Plan"
-        description="Owner-assigned task lanes derived from every obligation."
-        actions={
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" /> Add Task
-          </Button>
-        }
-      />
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {LANES.map((lane) => {
-          const laneTasks = tasks.filter((t) => t.status === lane);
-          return (
-            <div key={lane} className="flex flex-col gap-3">
-              <div className="flex items-center justify-between px-1">
-                <div className="flex items-center gap-2 text-sm font-semibold">
-                  <span
-                    className={
-                      "h-2 w-2 rounded-full " +
-                      (lane === "Todo"
-                        ? "bg-muted-foreground"
-                        : lane === "In Progress"
-                          ? "bg-info"
-                          : lane === "Review"
-                            ? "bg-warning"
-                            : "bg-success")
-                    }
-                  />
-                  {lane}
-                </div>
-                <span className="text-xs text-muted-foreground">{laneTasks.length}</span>
-              </div>
-              <div className="space-y-3">
-                {laneTasks.map((t) => {
-                  const ob = obligations.find((o) => o.id === t.obligationId);
-                  return (
-                    <Card
-                      key={t.id}
-                      className="cursor-grab rounded-xl p-4 shadow-none transition hover:border-primary/40 hover:shadow-sm"
-                    >
-                      <div className="flex items-center justify-between">
-                        <StatusPill tone="brand">{ob?.code ?? "OB"}</StatusPill>
-                        <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div className="mt-3 text-sm font-medium leading-snug">{t.title}</div>
-                      <div className="mt-3 h-1 overflow-hidden rounded-full bg-muted">
-                        <div
-                          className="h-full rounded-full bg-primary"
-                          style={{ width: `${t.progress}%` }}
-                        />
-                      </div>
-                      <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{t.assignee}</span>
-                        <span>{formatDate(t.dueDate)}</span>
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            )
+          )}
+        </>
+      )}
     </AppShell>
-  );
-}
-
-function TaskListItem({ owner, title, desc, due }: { owner: string; title: string; desc: string; due: string }) {
-  return (
-    <div className="border border-border rounded-xl p-3 flex gap-3 items-start hover:border-primary/30 transition bg-background">
-      <div className="shrink-0 font-mono text-[9px] font-bold bg-muted text-muted-foreground px-2 py-0.5 rounded uppercase mt-0.5">
-        {owner}
-      </div>
-      <div className="min-w-0">
-        <div className="text-xs font-semibold text-foreground leading-normal">{title}</div>
-        <p className="text-[10px] text-muted-foreground mt-0.5">{desc}</p>
-        <span className="text-[9px] text-muted-foreground/80 block mt-1.5">Deadline: {due}</span>
-      </div>
-    </div>
-  );
-}
-
-function EvidenceItem({ title, desc }: { title: string; desc: string }) {
-  return (
-    <li className="flex gap-2.5 items-start">
-      <div className="h-4 w-4 rounded-full bg-primary/10 border border-primary/25 text-primary flex items-center justify-center shrink-0 mt-0.5 text-[8px] font-bold">
-        &bull;
-      </div>
-      <div>
-        <div className="font-semibold text-foreground">{title}</div>
-        <div className="text-[10px] text-muted-foreground">{desc}</div>
-      </div>
-    </li>
   );
 }

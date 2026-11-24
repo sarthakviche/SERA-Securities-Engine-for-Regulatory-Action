@@ -12,7 +12,7 @@ import hashlib
 import logging
 import re
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -256,9 +256,21 @@ async def run_planning(db: AsyncSession, wf: WorkflowDocument, feedback: str | N
             o.owner = f"{o.department} Head"
             o.impact = m
     revision = int((wf.swd or {}).get("plan_revision", 0)) + (1 if feedback else 0)
+    # reviewer requests accumulate across revisions and become tracked tasks
+    requests = list((wf.swd or {}).get("plan_requests", []))
     if feedback:
+        requests.append(feedback)
         plan["feedback_applied"] = feedback
-    await _set(db, wf, "pending_approval_2", "gate_2", 85, impact=impact, sops=sops, plan=plan, plan_revision=revision)
+    for req_text in requests:
+        dept = next((d for d in org["departments"] if d.lower().split(" ")[0] in req_text.lower()), None)             or next((d for d in org["departments"] if d.lower().startswith("it") and re.search(r"\bIT\b|test|uat", req_text, re.I)), None)             or "Compliance"
+        plan["tasks"].append({
+            "obligation_code": obs[0]["code"] if obs else "GEN", "phase": "Validate",
+            "title": f"Reviewer request: {req_text[:90]}", "department": dept,
+            "due_date": (date.today() + timedelta(days=14)).isoformat(), "priority": "MEDIUM",
+            "evidence_requirement": "Sign-off from the requesting reviewer", "description": req_text,
+        })
+    await _set(db, wf, "pending_approval_2", "gate_2", 85, impact=impact, sops=sops, plan=plan, plan_revision=revision,
+               plan_requests=requests)
     await audit.record(db, kind="AGENT", title=f"Impact map, SOP drafts & plan ready ({len(plan['tasks'])} tasks)",
                        workflow_id=wf.id, detail=(f"Revision {revision} after feedback: {feedback}" if feedback else
                                                   f"{len(impact['mappings'])} obligation(s) mapped; "

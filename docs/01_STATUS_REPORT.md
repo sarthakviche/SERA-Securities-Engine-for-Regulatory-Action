@@ -61,3 +61,25 @@ hold pitch/video material.
 - Postgres 18 is installed as a Windows service, but its password is unknown and port 5433 is taken. **Fix:** a project-local cluster in `.localdb/` on port **55432** (user `sera` / pw `sera`, DB `sera`). It is created and started by the launcher.
 - Docker Desktop is installed but not running. Nothing depends on it.
 - There is no GPU and no Ollama, so local LLM inference is not practical. **Fix:** a deterministic offline analysis engine (see the plan).
+
+## 3. Progress update (end of session, 2026-11-24)
+
+| Gap | Status |
+|---|---|
+| No LLM / no fallback | **Fixed.** A deterministic offline engine is the default. Claude (`claude-opus-5-5`) or Groq is used automatically when a key is set, with citation verification. |
+| Two disconnected AI halves | **Replaced.** A single Postgres-backed orchestrator (`app/engine/service.py`). The legacy code is kept for reference. |
+| Ingestion not reachable from the API | **Fixed.** Upload, SEBI sync, auto-seed and per-circular **Analyse** are all available. |
+| Frontend on mock data | **Fixed.** All 11 pages use `/api/v2` and the demo/mock modules are removed. A `<Toaster>` is now mounted (toasts were silently dropped before). |
+| Gate 1 / Gate 2 | **Working**, including reject → re-analyse and reject → regenerate plan with feedback tasks. |
+| Tasks, evidence, roll-up | **Working.** SHA-256 evidence vault; obligation → circular compliance roll-up. |
+| Audit trail | **Working.** Hash-chained, with verify, tamper demo and undo. |
+| Org profile / onboarding | **Working.** It drives applicability and impact mapping. |
+| Dashboard KPIs | **Live.** |
+| One-command start | `Start SERA` shortcut / `start-sera.ps1`, plus `Stop SERA`. |
+| Tests | 10 new engine tests pass. The legacy suite gives 102 passed with 11 failures/errors that **pre-exist on the original commit** (stale `WorkflowService` imports, repository API drift). |
+
+**Still open:**
+- OCR for scanned PDFs (2 of the 4 sample SEBI PDFs are image-only and correctly fail closed).
+- Multi-user auth.
+- Scheduled monitoring (Celery stubs are still empty).
+- Fixing or retiring the legacy LangGraph tests.

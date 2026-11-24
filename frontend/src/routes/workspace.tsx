@@ -1,15 +1,17 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, ArrowRight, Check, CircleHelp, ExternalLink, Loader2, Play, ShieldCheck, X } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/sera/app-shell";
 import { PageHeader } from "@/components/sera/page-header";
 import { StatusPill } from "@/components/sera/status-pill";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, AlertTriangle, Flag, ArrowRight, Check, X, Edit3 } from "lucide-react";
-import { useDemo } from "@/lib/demo";
-import { toast } from "sonner";
-import { useState } from "react";
-import { api } from "@/lib/api";
-import { Loader2 } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import { Citation, ErrorBox, Loading, NoCircular, RiskPill, SectionTitle, StageStepper, Stat, WfStatusPill, WorkflowPicker } from "@/components/sera/bits";
+import { fmtDate, providerLabel, sera, useActiveWorkflow, useSeraMutation, useWorkflow, type ObligationRow } from "@/lib/sera";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/workspace")({
   head: () => ({ meta: [{ title: "Regulatory Workspace · SERA" }] }),
@@ -17,384 +19,223 @@ export const Route = createFileRoute("/workspace")({
 });
 
 function Workspace() {
-  const { demoStage, setDemoStage, isDemoActive, workflowId } = useDemo();
-  const navigate = useNavigate();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [wfId, setWf, circulars] = useActiveWorkflow();
+  const { data: wf, error, isLoading } = useWorkflow(wfId);
+  const [included, setIncluded] = useState<Record<string, boolean>>({});
+  const [focus, setFocus] = useState<string | null>(null);
+  const [comment, setComment] = useState("");
+  const [rejecting, setRejecting] = useState(false);
 
-  const handleApproveInterpretation = async () => {
-    if (!workflowId) {
-      setDemoStage("INTERPRETATION_APPROVED");
-      toast.success("AI Interpretation Approved", {
-        description: "Obligation OB-MIRSD-104 has been created and marked as Approved.",
-      });
-      navigate({ to: "/obligations" });
-      return;
-    }
-    
-    setIsSubmitting(true);
-    try {
-      await api.submitGate(workflowId, "gate_1", "approved");
-      setDemoStage("INTERPRETATION_APPROVED");
-      toast.success("Impact Mapping Initiated", {
-        description: "AI agents are now mapping obligations to departments and systems.",
-      });
-      navigate({ to: "/impact-map" });
-    } catch (e) {
-      toast.error("Failed to submit approval. Please retry.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  useEffect(() => {
+    if (wf) setIncluded(Object.fromEntries(wf.obligations.map((o) => [o.code, !o.excluded])));
+  }, [wf?.circular.id, wf?.obligations.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Render the Demo Workspace if demo mode is active
-  if (isDemoActive) {
-    return (
-      <AppShell>
-        <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
-          <Link to="/" className="hover:text-foreground">Workspace</Link>
-          <span>/</span>
-          <span className="text-foreground">SEBI Circular 2026/104</span>
-        </div>
+  const gate = useSeraMutation((a: { decision: "approved" | "rejected" }) =>
+    sera.gate(wfId!, "gate_1", a.decision, comment || undefined, Object.entries(included).filter(([, v]) => !v).map(([k]) => k)),
+  );
+  const analyze = useSeraMutation((id: string) => sera.analyze(id));
 
-        <PageHeader
-          eyebrow="Reviewing Ingestion Analysis"
-          title="SEBI Circular SEBI/HO/MIRSD/2026/104"
-          description="Periodic Re-verification of Registered Client Mobile Numbers"
-          actions={
-            <>
-              <span className="mr-2 inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-ping" />
-                Illustrative Demo Scenario
-              </span>
-              <Button variant="outline">Compare Versions</Button>
-              <Button onClick={handleApproveInterpretation} disabled={isSubmitting} className="gap-2 bg-primary hover:bg-primary/95 text-primary-foreground cursor-pointer">
-                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />} 
-                {isSubmitting ? "Approving..." : "Approve Interpretation"}
-              </Button>
-            </>
-          }
-        />
+  const citedRefs = useMemo(() => new Set((wf?.obligations ?? []).map((o) => o.clause_ref)), [wf]);
+  const focusRef = wf?.obligations.find((o) => o.code === focus)?.clause_ref;
+  const pending = wf?.status === "pending_approval_1";
+  const inScope = Object.values(included).filter(Boolean).length;
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
-          {/* Document Viewer */}
-          <Card className="rounded-2xl p-8 bg-card border-border">
-            <div className="mx-auto max-w-2xl">
-              <div className="text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-600 dark:text-amber-400 bg-amber-500/10 py-1.5 px-3 rounded-full border border-amber-500/20 max-w-xs mx-auto mb-6">
-                Illustrative Demo Scenario
-              </div>
-              <h2 className="mt-4 text-center font-display text-2xl font-bold uppercase underline decoration-1 underline-offset-4 tracking-tight">
-                Securities and Exchange Board of India
-              </h2>
-              <div className="mt-3 text-center text-xs text-muted-foreground font-mono">
-                CIRCULAR NO: SEBI/HO/MIRSD/2026/104 &nbsp; · &nbsp; 14 July 2026
-              </div>
-
-              <div className="mt-8 space-y-5 text-[14px] leading-relaxed text-foreground/90 font-sans">
-                <div>
-                  <div className="font-semibold text-foreground">To,</div>
-                  <div className="font-medium text-foreground/80">All Registered Stockbrokers</div>
-                  <div className="font-medium text-foreground/80">Association of Stock Brokers of India (ASBI)</div>
-                </div>
-
-                <p className="font-bold text-foreground border-l-2 border-primary pl-3 py-1 bg-surface-2/40">
-                  Subject: Periodic Re-verification of Registered Client Mobile Numbers
-                </p>
-
-                <p>
-                  1. In order to strengthen investor protection, mitigate risk of unauthorized
-                  trading accounts, and prevent communication slippages, SEBI has reviewed the present client
-                  onboarding and contact maintenance guidelines. It has been observed that outdated or inactive client mobile
-                  numbers pose operational vulnerabilities in market communications.
-                </p>
-
-                <p>
-                  2.{" "}
-                  <mark className="rounded bg-amber-500/20 dark:bg-amber-500/35 px-1 py-0.5 text-foreground font-medium underline decoration-amber-500/60 decoration-dashed">
-                    Stockbrokers shall be mandated to perform a periodic re-verification of the registered
-                    mobile numbers of all active clients at least once in every 12 months
-                  </mark>
-                  . This requirement supersedes the existing circular dated May 18, 2024, which permitted a
-                  24-month re-verification interval.
-                </p>
-
-                <p>
-                  3.{" "}
-                  <mark className="rounded bg-amber-500/20 dark:bg-amber-500/35 px-1 py-0.5 text-foreground font-medium underline decoration-amber-500/60 decoration-dashed">
-                    The verification must be conducted through an appropriate authenticated mechanism
-                  </mark>
-                  , and proper audit logs of all verification events, including timestamps and verification outcome,
-                  must be retained as compliance evidence for a minimum of 5 years.
-                </p>
-
-                <p>
-                  4. Registered Stockbrokers are advised to establish necessary technology configurations
-                  to comply with this mandate. The provisions of this circular shall come into force with effect from
-                  <strong> 1 October 2026</strong>.
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          {/* AI Analysis Panel */}
-          <aside className="space-y-4">
-            <Card className="rounded-2xl p-5 bg-card border-border">
-              <div className="flex items-center justify-between border-b border-border pb-3">
-                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                  <ShieldCheck className="h-4 w-4 text-primary" /> AI Ingestion Analysis
-                </div>
-                <StatusPill tone="brand">Extraction Success</StatusPill>
-              </div>
-
-              <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Applicability
-              </div>
-              <Card className="mt-1.5 rounded-xl bg-surface-2 p-3.5 shadow-none border border-border">
-                <div className="text-xs font-semibold text-foreground">Stockbrokers (All Segments)</div>
-                <p className="mt-1 text-[11px] text-muted-foreground leading-relaxed">
-                  Identified 1 primary business segment (Stockbroker Registration) and 3 internal systems impacted. Cadence change requires operational adjustment.
-                </p>
-              </Card>
-
-              <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Extracted Obligation
-              </div>
-              <Card className="mt-1.5 rounded-xl p-3.5 shadow-none border border-border bg-background">
-                <div className="flex items-center justify-between">
-                  <StatusPill tone="brand">OB-MIRSD-104</StatusPill>
-                  <span className="text-[10px] text-muted-foreground font-medium">Clause 2, 3</span>
-                </div>
-                <div className="mt-2 text-xs font-semibold text-foreground">Periodic Client Mobile Re-verification</div>
-                <p className="mt-1 text-[11px] text-muted-foreground leading-normal">
-                  Mandatory re-verification of registered mobile numbers of all active clients every 12 months with secure audit logging.
-                </p>
-              </Card>
-
-              <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Delta Analysis (Changes)
-              </div>
-              <Card className="mt-1.5 rounded-xl border-destructive/20 bg-destructive/5 p-3.5 shadow-none">
-                <div className="flex items-center gap-2 text-xs font-semibold text-destructive">
-                  <AlertTriangle className="h-3.5 w-3.5" /> Mandate Interval Reduction
-                </div>
-                <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-lg bg-background border border-border p-2.5 text-xs">
-                  <div className="text-center">
-                    <div className="text-[9px] uppercase tracking-wide text-muted-foreground">
-                      Previous
-                    </div>
-                    <div className="font-semibold text-muted-foreground line-through">24 Months</div>
-                  </div>
-                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-                  <div className="text-center">
-                    <div className="text-[9px] uppercase tracking-wide text-muted-foreground">
-                      New
-                    </div>
-                    <div className="font-bold text-foreground">12 Months</div>
-                  </div>
-                </div>
-                <p className="mt-2 text-[10px] text-muted-foreground leading-normal">
-                  Decreasing verification cycle will increase SMS delivery load and operational KYC review frequency by 2.0x.
-                </p>
-              </Card>
-
-              <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Ambiguity Resolved Recommendation
-              </div>
-              <Card className="mt-1.5 rounded-xl border-warning/30 bg-warning/5 p-3.5 shadow-none">
-                <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
-                  <Flag className="h-3.5 w-3.5 text-warning" /> "Appropriate Authenticated Mechanism"
-                </div>
-                <p className="mt-1.5 text-[11px] text-muted-foreground leading-normal">
-                  The circular does not specify a mandatory technical method.
-                </p>
-                <div className="mt-2 rounded bg-background border border-border p-2 text-[10.5px] leading-relaxed">
-                  <strong className="text-primary font-semibold">SERA Recommendation:</strong> Use SMS OTP (One-Time Password) verification integrated with existing CRM profiles & SMS gateways.
-                  <span className="mt-1 block text-[9.5px] font-medium text-muted-foreground italic">
-                    * This is an implementation recommendation, not a regulatory constraint.
-                  </span>
-                </div>
-              </Card>
-
-              <div className="mt-5 pt-3 border-t border-border flex items-center justify-between">
-                <div className="text-[11.5px] text-muted-foreground">Analysis Confidence</div>
-                <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                  98% Confidence
-                </div>
-              </div>
-
-              <div className="mt-4 grid grid-cols-3 gap-2">
-                <Button variant="outline" size="sm" className="text-xs cursor-pointer">
-                  <X className="h-3.5 w-3.5 mr-1" /> Reject
-                </Button>
-                <Button variant="outline" size="sm" className="text-xs cursor-pointer">
-                  <Edit3 className="h-3.5 w-3.5 mr-1" /> Edit
-                </Button>
-                <Button onClick={handleApproveInterpretation} disabled={isSubmitting} size="sm" className="text-xs bg-primary hover:bg-primary/95 text-primary-foreground cursor-pointer col-span-1">
-                  {isSubmitting ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1" />}
-                  {isSubmitting ? "Approving..." : "Approve"}
-                </Button>
-              </div>
-            </Card>
-          </aside>
-        </div>
-      </AppShell>
-    );
-  }
-
-  // Fallback to default page (original mockup)
   return (
     <AppShell>
-      <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
-        <Link to="/" className="hover:text-foreground">Workspace</Link>
-        <span>/</span>
-        <span className="text-foreground">SEBI Circular 2026/104</span>
-      </div>
-
       <PageHeader
-        eyebrow="Reviewing"
-        title="SEBI Circular 2026/104"
-        description="Cybersecurity Framework for Market Infrastructure Institutions"
-        actions={
-          <>
-            <Button variant="outline">Compare Versions</Button>
-            <Button className="gap-2">
-              <ShieldCheck className="h-4 w-4" /> Review & Approve
-            </Button>
-          </>
-        }
+        eyebrow="Interpretation · Gate 1"
+        title="Regulatory Workspace"
+        description="Review what SERA extracted. Every obligation quotes its source clause verbatim. Approve the interpretation to start impact mapping."
+        actions={<WorkflowPicker value={wfId} onChange={setWf} circulars={circulars} />}
       />
-
-      <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
-        {/* Document */}
-        <Card className="rounded-2xl p-8 bg-card border-border">
-          <div className="mx-auto max-w-2xl">
-            <div className="text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              Confidential / Regulatory
-            </div>
-            <h2 className="mt-6 text-center font-display text-3xl underline decoration-2 underline-offset-4">
-              CIRCULAR
-            </h2>
-            <div className="mt-4 text-center text-sm text-muted-foreground font-mono">
-              SEBI/HO/MRD/CIR/P/2026/104 &nbsp; · &nbsp; January 15, 2026
-            </div>
-
-            <div className="mt-10 space-y-5 text-[15px] leading-relaxed text-foreground/90 font-sans">
-              <div>
-                <div className="font-medium">To,</div>
-                <div>All Stock Exchanges</div>
-                <div>All Depositories</div>
-                <div>All Clearing Corporations</div>
-              </div>
-              <p className="font-semibold underline underline-offset-2">
-                Subject: Comprehensive Cybersecurity and Cyber Resilience Framework for Market
-                Infrastructure Institutions (MIIs)
-              </p>
-              <p>
-                1. It has been observed that the increasing sophistication of cyber threats
-                necessitates a more agile and robust response mechanism. In supersession of the
-                earlier circular dated March 12, 2023, the following revised framework is being
-                implemented with immediate effect.
-              </p>
-              <p>
-                2.{" "}
-                <mark className="rounded bg-accent/60 px-1 py-0.5">
-                  Section 4.2 (Reporting Timelines): All regulated entities shall now be mandated
-                  to submit their Cyber Audit Report on a semi-annual basis.
-                </mark>{" "}
-                This is a significant shift from the previous annual requirement to ensure
-                high-frequency monitoring of technical vulnerabilities.
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        {/* AI Analysis panel */}
-        <aside className="space-y-4">
-          <Card className="rounded-2xl p-5 bg-card border-border">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <ShieldCheck className="h-4 w-4 text-primary" /> AI Analysis Engine
-              </div>
-              <StatusPill tone="brand">Stable v4.2</StatusPill>
-            </div>
-
-            <div className="mt-5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              Applicability
-            </div>
-            <Card className="mt-2 rounded-xl bg-surface-2 p-4 shadow-none border border-border">
-              <div className="text-sm font-semibold">Tier-1 & Tier-2 MIIs</div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Identified 12 internal entities requiring alignment. Impact: High Architecture
-                Change.
-              </p>
-            </Card>
-
-            <div className="mt-5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              Key Obligations
-            </div>
-            <Card className="mt-2 rounded-xl p-4 shadow-none border border-border bg-background">
-              <div className="flex items-center justify-between">
-                <StatusPill tone="brand">OB-001</StatusPill>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div className="mt-2 text-sm font-semibold">Cyber Security Committee Formation</div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Mandatory formation of a board-level committee led by a technical Non-Executive
-                Director. Deadline: 90 days from circular date.
-              </p>
-            </Card>
-
-            <div className="mt-5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              Change Analysis (Delta)
-            </div>
-            <Card className="mt-2 rounded-xl border-destructive/30 bg-destructive/5 p-4 shadow-none">
-              <div className="flex items-center gap-2 text-sm font-semibold text-destructive">
-                <AlertTriangle className="h-4 w-4" /> Critical Change: Audit Frequency
-              </div>
-              <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-lg bg-background border border-border p-3 text-sm">
-                <div>
-                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-sans">
-                    Previous
-                  </div>
-                  <div className="font-medium line-through">12 Months</div>
+      {!wfId && circulars && <NoCircular />}
+      {error && <ErrorBox error={error} />}
+      {isLoading && <Loading />}
+      {wf && (
+        <>
+          <Card className="mb-6 rounded-2xl p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <span className="font-mono">{wf.analysis?.circular_number ?? wf.circular.reference}</span>
+                  <span>· {fmtDate(wf.analysis?.circular_date ?? wf.circular.issue_date)}</span>
+                  {wf.analysis?.addressees?.length ? <span>· To: {wf.analysis.addressees.join(", ")}</span> : null}
                 </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-sans">
-                    Revised
-                  </div>
-                  <div className="font-semibold text-foreground">6 Months</div>
-                </div>
+                <h2 className="mt-2 font-display text-2xl leading-tight">{wf.circular.title}</h2>
+                {wf.analysis?.summary && <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{wf.analysis.summary}</p>}
               </div>
-              <p className="mt-3 text-xs text-muted-foreground">
-                Resource requirement predicted to increase by 2.4x for compliance department.
-              </p>
-            </Card>
-
-            <div className="mt-5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              Ambiguity Review
+              <div className="flex flex-col items-end gap-2">
+                <WfStatusPill status={wf.status} />
+                {wf.circular.has_pdf && (
+                  <a className="inline-flex items-center gap-1 text-xs text-primary hover:underline" href={sera.pdfUrl(wf.circular.id)} target="_blank" rel="noreferrer">
+                    Original PDF <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+              </div>
             </div>
-            <Card className="mt-2 rounded-xl border-warning/40 bg-warning/10 p-4 shadow-none">
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <Flag className="h-4 w-4 text-warning" /> Definition Ambiguity: "Emerging
-                Infrastructure"
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Circular does not provide specific capitalization or volume thresholds for
-                'Emerging' status. Manual clarification with SEBI required.
-              </p>
-            </Card>
+            <div className="mt-5"><StageStepper status={wf.status} /></div>
           </Card>
 
-          <div className="flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">Analysis Confidence</div>
-            <div className="text-sm font-semibold text-foreground">94%</div>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" className="flex-1">Discard Analysis</Button>
-            <Button className="flex-1">Commit to Register</Button>
-          </div>
-        </aside>
-      </div>
+          {(wf.status === "created" || wf.status === "failed" || wf.status === "changes_requested") && (
+            <Card className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl p-6">
+              <div className="text-sm">
+                {wf.status === "changes_requested" ? (
+                  <>Interpretation was rejected: <em>{wf.approvals.gate_1?.comment}</em>. Re-run the analysis after reviewing.</>
+                ) : wf.status === "failed" ? (
+                  <span className="text-destructive">Analysis failed: {wf.circular.error}</span>
+                ) : (
+                  "This circular has not been analysed yet."
+                )}
+              </div>
+              <Button onClick={() => analyze.mutate(wf.circular.id, { onError: (e) => toast.error(e.message) })} disabled={analyze.isPending || !wf.circular.has_pdf}>
+                <Play className="mr-1.5 h-4 w-4" /> Run analysis
+              </Button>
+            </Card>
+          )}
+          {wf.status === "in_analysis" && (
+            <Card className="mb-6 rounded-2xl p-8 text-center">
+              <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
+              <div className="mt-3 font-medium">Analysing circular… ({wf.current_stage.replaceAll("_", " ")})</div>
+              <div className="mx-auto mt-3 h-1.5 w-80 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary transition-all" style={{ width: `${wf.progress}%` }} /></div>
+            </Card>
+          )}
+          {wf.status === "needs_ocr" && (
+            <Card className="mb-6 flex items-start gap-3 rounded-2xl border-destructive/30 p-6 text-sm">
+              <AlertTriangle className="mt-0.5 h-4 w-4 text-destructive" />
+              <div>
+                <div className="font-semibold">Fail-closed: no machine-readable text</div>
+                <div className="mt-1 text-muted-foreground">{wf.analysis?.summary} Upload a searchable PDF from the Inbox.</div>
+              </div>
+            </Card>
+          )}
+
+          {wf.analysis && wf.obligations.length > 0 && (
+            <>
+              <div className="mb-6 grid gap-4 md:grid-cols-4">
+                <Stat label="Requirements found" value={wf.analysis.obligations} hint={`${wf.analysis.paragraphs.length} paragraphs read`} />
+                <Stat label="Applicable to you" value={wf.analysis.applicable} hint="based on your entity profile" />
+                <Stat label="Need interpretation" value={wf.obligations.filter((o) => o.ambiguity.length).length} hint={`${wf.analysis.ambiguities} ambiguity flag(s)`} tone={wf.analysis.ambiguities ? "warning" : undefined} />
+                <Stat label="Engine" value={<span className="text-base">{providerLabel(wf.analysis.provider)}</span>} hint="citations verified against source" />
+              </div>
+
+              <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
+                <Card className="max-h-[calc(100vh-180px)] overflow-y-auto rounded-2xl p-5 lg:sticky lg:top-20">
+                  <SectionTitle>Source text</SectionTitle>
+                  <div className="space-y-2">
+                    {wf.analysis.paragraphs.map((p) => (
+                      <div
+                        key={p.ref + p.text.slice(0, 20)}
+                        className={cn(
+                          "rounded-lg px-3 py-2 text-[13px] leading-relaxed transition",
+                          citedRefs.has(p.ref) && "bg-primary/5",
+                          focusRef === p.ref && "bg-primary/15 ring-1 ring-primary/40",
+                        )}
+                      >
+                        <span className="mr-2 font-mono text-[10px] text-muted-foreground">{p.ref}</span>
+                        {p.text}
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+
+                <div className="space-y-4">
+                  <SectionTitle right={<span className="text-xs text-muted-foreground">{inScope} of {wf.obligations.length} in scope</span>}>
+                    Extracted obligations
+                  </SectionTitle>
+                  {wf.obligations.map((o) => (
+                    <ObligationCard
+                      key={o.id}
+                      o={o}
+                      editable={pending}
+                      included={included[o.code] ?? !o.excluded}
+                      onToggle={(v) => setIncluded((s) => ({ ...s, [o.code]: v }))}
+                      focused={focus === o.code}
+                      onFocus={() => setFocus(o.code)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {pending ? (
+                <Card className="sticky bottom-4 z-20 mt-6 rounded-2xl border-primary/30 p-5 shadow-xl">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <ShieldCheck className="h-5 w-5 text-primary" />
+                    <div className="min-w-0 flex-1 text-sm">
+                      <div className="font-semibold">Gate 1: approve this interpretation?</div>
+                      <div className="text-muted-foreground">{inScope} obligation(s) will move to impact mapping. Excluded items are kept as waived, with your decision on record.</div>
+                    </div>
+                    {rejecting ? (
+                      <div className="flex w-full items-end gap-2 md:w-auto">
+                        <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="What should be re-interpreted?" className="min-h-[40px] md:w-80" />
+                        <Button variant="destructive" disabled={!comment.trim() || gate.isPending} onClick={() => gate.mutate({ decision: "rejected" }, { onSuccess: () => { toast("Interpretation sent back"); setRejecting(false); }, onError: (e) => toast.error(e.message) })}>Send back</Button>
+                        <Button variant="ghost" onClick={() => setRejecting(false)}>Cancel</Button>
+                      </div>
+                    ) : (
+                      <>
+                        <Button variant="outline" onClick={() => setRejecting(true)}><X className="mr-1.5 h-4 w-4" /> Reject</Button>
+                        <Button disabled={gate.isPending || inScope === 0} onClick={() => gate.mutate({ decision: "approved" }, { onSuccess: () => toast.success("Interpretation approved. Impact map and plan are drafted."), onError: (e) => toast.error(e.message) })}>
+                          {gate.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Check className="mr-1.5 h-4 w-4" />} Approve interpretation
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </Card>
+              ) : (
+                wf.approvals.gate_1 && (
+                  <Card className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl p-5 text-sm">
+                    <div>
+                      <StatusPill tone={wf.approvals.gate_1.decision === "approved" ? "success" : "danger"}>Gate 1 {wf.approvals.gate_1.decision}</StatusPill>
+                      <span className="ml-2 text-muted-foreground">by {wf.approvals.gate_1.by} · {fmtDate(wf.approvals.gate_1.at)}{wf.approvals.gate_1.comment ? ` · "${wf.approvals.gate_1.comment}"` : ""}</span>
+                    </div>
+                    {wf.approvals.gate_1.decision === "approved" && (
+                      <Button asChild size="sm"><Link to="/implementation-plan">Implementation plan <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
+                    )}
+                  </Card>
+                )
+              )}
+            </>
+          )}
+          {wf.analysis && wf.obligations.length === 0 && wf.status !== "in_analysis" && wf.status !== "needs_ocr" && (
+            <Card className="rounded-2xl p-6 text-sm text-muted-foreground">No actionable requirements were found in this circular (informational only).</Card>
+          )}
+        </>
+      )}
     </AppShell>
+  );
+}
+
+function ObligationCard({ o, editable, included, onToggle, focused, onFocus }: { o: ObligationRow; editable: boolean; included: boolean; onToggle: (v: boolean) => void; focused: boolean; onFocus: () => void }) {
+  return (
+    <Card onMouseEnter={onFocus} className={cn("rounded-xl p-5 transition", focused && "border-primary/40", !included && "opacity-60")}>
+      <div className="flex items-start gap-3">
+        {editable && <Checkbox checked={included} onCheckedChange={(v) => onToggle(!!v)} className="mt-1" aria-label="Include in scope" />}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-[11px] text-muted-foreground">{o.code}</span>
+            <RiskPill risk={o.risk} />
+            <StatusPill>{o.category}</StatusPill>
+            {!o.applicable && <StatusPill tone="neutral">Not applicable</StatusPill>}
+            {o.confidence !== null && <span className="ml-auto text-[11px] text-muted-foreground">confidence {Math.round((o.confidence ?? 0) * 100)}%</span>}
+          </div>
+          <div className="mt-2 font-semibold leading-snug">{o.title}</div>
+          <div className="mt-3"><Citation refLabel={o.clause_ref} page={o.page} text={o.source_text} highlight={focused} /></div>
+          <div className="mt-3 grid gap-2 text-[13px] md:grid-cols-2">
+            <div><span className="text-muted-foreground">Deadline: </span>{o.deadline ?? "Not stated"}{o.due_date ? ` (${fmtDate(o.due_date)})` : ""}</div>
+            <div><span className="text-muted-foreground">Evidence: </span>{o.evidence}</div>
+          </div>
+          <div className="mt-2 text-[13px]"><span className="text-muted-foreground">Applicability: </span>{o.applicability_reason}</div>
+          {o.ambiguity.length > 0 && (
+            <div className="mt-3 space-y-1.5 rounded-lg border border-warning/30 bg-warning/10 p-3">
+              {o.ambiguity.map((a, i) => (
+                <div key={i} className="flex gap-2 text-[12.5px]">
+                  <CircleHelp className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning-foreground dark:text-warning" />
+                  <div><span className="font-semibold">{a.type}</span> - "{a.term}": {a.explanation}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </Card>
   );
 }

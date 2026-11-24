@@ -1,86 +1,51 @@
 # SERA — Securities Engine for Regulatory Action
 
-SERA is an AI-powered regulatory compliance platform designed to help organizations analyze regulations, track obligations, manage implementation plans, and monitor compliance activities through an intuitive web interface. 
+SERA turns SEBI circulars into **cited obligations → owner-assigned tasks → hash-verified evidence → regulator-ready compliance**. Agents draft; humans approve at two gates; every step lands in a tamper-evident audit trail. It runs **entirely on your machine** (PostgreSQL + FastAPI + React) with no API keys required.
 
-It solves the complex regulatory compliance problem by automatically monitoring regulatory bodies (like SEBI), fetching new circulars, and leveraging AI to convert dense regulatory text into actionable compliance information. The frontend dashboard visualizes these results, allowing compliance teams to easily track obligations, map impacts, and orchestrate their implementation plans.
+## Quick start (Windows)
 
-## System Architecture
+Double-click **`Start SERA`** (the shortcut with the SERA icon, or `Start SERA.cmd`). It will:
 
-The system is structured as a multi-stage processing pipeline. Below is the current state of the architecture. Stages that are fully implemented process the data, while others are currently mocked in the pipeline orchestrator pending future AI integration.
+1. create/start a project-local PostgreSQL cluster in `.localdb/` on port **55432** (user/pw `sera`/`sera`);
+2. create the Python venv + install deps (first run), apply Alembic migrations;
+3. start the API on **http://127.0.0.1:8000** and the UI on **http://localhost:5173**, then open the browser.
 
-* **Regulatory Fetching**: **(Implemented)** Scrapes the latest circulars from SEBI's website and downloads the associated PDF documents.
-* **Ingestion**: **(Implemented)** Processes the downloaded PDFs, extracts text layout, headings, numbering, and clauses, and structures them into a clean JSON format via a multi-module pipeline.
-* **LLM Extraction**: *(Future Work)* Will extract key entities and requirements using AI providers. Currently mocked in the orchestrator.
-* **Obligation Agent**: *(Future Work)* Will identify and categorize specific compliance obligations. Currently mocked in the orchestrator.
-* **Applicability Agent**: *(Future Work)* Will determine which obligations apply specifically to the organization. Currently mocked in the orchestrator.
-* **Ambiguity Solver**: *(Future Work)* Will identify ambiguous clauses requiring human review or legal interpretation. Currently mocked in the orchestrator.
-* **Task Generation Agent**: *(Future Work)* Will automatically generate actionable tasks based on the identified obligations. Currently mocked in the orchestrator.
-* **Frontend Dashboard**: **(Implemented)** A React-based web interface to monitor pipeline jobs in real-time, view extracted obligations, and manage compliance tasks.
+`Stop SERA.cmd` stops everything. Requirements: PostgreSQL 15+ binaries installed (only the binaries are used, not your existing server), Python 3.12, Node 20+.
 
-## Project Structure
-
-```text
-.
-├── backend/               # FastAPI backend application
-│   ├── app/
-│   │   ├── agents/        # Agent directories (Obligation, Applicability, etc. - Future Work)
-│   │   ├── core/          # Configuration (Pydantic settings) and logging
-│   │   ├── ingestion/     # PDF processing and structuring modules
-│   │   ├── pipeline/      # Pipeline orchestration and mocked runner
-│   │   └── scraper/       # SEBI regulatory scraping tools (Playwright)
-│   ├── data/              # Local JSON data stores (documents, change reports)
-│   └── downloads/         # Downloaded regulatory PDFs
-└── frontend/              # React frontend application
-    ├── public/            # Static assets
-    └── src/               # React components, routes, and API hooks
-```
-
-## Prerequisites
-
-* **Python**: 3.12 (Requires Python 3.12 due to native dependencies. Do NOT use Python 3.13 as it encounters native dependency problems).
-* **Environment**: Conda or standard Python `venv`
-* **Node.js**: v18 or higher
-* **npm**: v9 or higher
-* **Database**: None required currently. (Data is stored in local JSON files; Alembic is initialized but no PostgreSQL configuration is currently required).
-
-## Backend Setup
-
-Follow these steps to configure and run the backend from a fresh clone:
-
+### Manual start
 ```powershell
-# 1. Navigate to the backend directory
-cd backend
-
-# 2. Create a virtual environment with Python 3.12
-# (Using Conda as an example, but standard venv works too)
-conda create -n sera python=3.12 -y
-
-# 3. Activate the environment
-conda activate sera
-
-# 4. Install backend dependencies
-pip install -r requirements.txt
-
-# 5. Install Playwright browsers (required for the SEBI scraper)
-playwright install
-
-# 6. Start the backend server (runs on port 8000)
-python -m app.main
+cd backend; .\.venv\Scripts\python.exe -m alembic upgrade head; .\.venv\Scripts\python.exe -m uvicorn app.main:app --port 8000
+cd frontend; npx vite dev --port 5173
 ```
-*(The backend will start at `http://0.0.0.0:8000`. API requests from the frontend are proxied here).*
 
-## Frontend Setup
+## How it works
 
-Follow these steps to configure and run the frontend dashboard:
+| Stage | What happens | Where |
+|---|---|---|
+| Intake | SEBI scraper/downloader, PDF upload, or PDFs in `backend/downloads/` (auto-registered on start) | `app/scraper`, `app/engine/service.py` |
+| Analysis | PDF → numbered paragraphs → obligations / exemptions / timeline changes, deadlines & SLAs, applicability vs org profile, ambiguity flags, risk | `app/engine/text.py`, `analyzer.py` |
+| Optional LLM | If `ANTHROPIC_API_KEY` or `GROQ_API_KEY` is set, the LLM *proposes* obligations; only those whose quote is found verbatim in the PDF are kept | `app/engine/llm.py` |
+| Gate 1 | Human approves the interpretation (can exclude items) | Workspace |
+| Planning | Impact map (departments/systems), SOP drafts, 3-phase task plan | Impact Map, Implementation Plan |
+| Gate 2 | Human approves plan, or requests changes (feedback becomes tasks) | Implementation Plan |
+| Execution | Tasks with owners/due dates, evidence upload (SHA-256), roll-up to compliance | Implementation Tracker |
+| Audit | Append-only SHA-256 hash chain + verify endpoint | Audit Trail |
 
-```powershell
-# 1. Navigate to the frontend directory
-cd frontend
+API: `/api/v2/*` (see `app/api_v2/router.py`, OpenAPI at http://127.0.0.1:8000/docs).
 
-# 2. Install Node dependencies
-npm install
+## Useful scripts (run from `backend/` with `.venv\Scripts\python.exe`)
+- `scripts/reset_demo.py` – wipe workflow data for a clean demo (circulars re-seed on next start)
+- `scripts/smoke_v2.py` – end-to-end API test (analyse → gates → evidence → compliant → verify chain)
+- `scripts/tamper_demo.py [--undo]` – edit an audit row to demonstrate tamper detection
+- `python -m pytest tests/engine` – engine unit tests
 
-# 3. Start the frontend development server (runs on port 5173)
-npm run dev
-```
-*(The frontend uses Vite to automatically proxy API requests starting with `/api` to the backend running at `http://127.0.0.1:8000`).*
+## Docs
+- `docs/01_STATUS_REPORT.md` – audit of what existed and what was incomplete
+- `docs/02_IMPLEMENTATION_PLAN.md` – the plan that was executed
+- `docs/03_HACKATHON_STRATEGY.md` – market research, positioning, pitch
+- `docs/04_DEMO_SCRIPT.md` – 4-minute live demo walkthrough
+
+## Notes
+- Email notifications (Resend) are disabled in `backend/.env` for local dev (`EMAIL_ENABLED=false`).
+- Scanned (image-only) PDFs are detected and **not** analysed (fail-closed) – OCR is on the roadmap.
+- The older Groq pipeline (`/api/v1/pipeline`) and LangGraph slice (`app/ai/graph`) are kept for reference; the product uses the v2 engine.

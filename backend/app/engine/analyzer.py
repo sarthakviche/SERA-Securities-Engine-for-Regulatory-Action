@@ -101,7 +101,13 @@ def extract_deadline(sentence: str, base: date | None) -> tuple[str | None, date
     rm = REL_RE.search(sentence)
     if rm:
         n = _num(rm.group(1))
+        rest = sentence[rm.end():]
         text = rm.group(0)
+        # "within 7 working days of its closure" is a recurring, event-driven SLA - not a one-off deadline
+        anchored_to_circular = re.match(r"\s*(of|from|after)\s+(the\s+)?(date of\s+)?(this circular|issuance|issue of this)", rest, re.I)
+        if re.match(r"\s*(of|from|after)\b", rest, re.I) and not anchored_to_circular:
+            event = re.match(r"\s*((?:of|from|after)\s+[^,.;]{3,60})", rest, re.I)
+            return f"{text} {event.group(1).strip() if event else ''}".strip(), None, frequency or "event-driven SLA"
         due = _add(base, n, rm.group(2)) if base and n else None
         return text, due, frequency
     return None, None, frequency
@@ -173,6 +179,8 @@ def extract_candidates(circ: ParsedCircular) -> list[dict[str, Any]]:
     cands: list[dict[str, Any]] = []
     parents: dict[str, dict[str, Any]] = {}  # para number -> {"actor_text", "verb"}
     for p in circ.paragraphs:
+        # a paragraph that opens by recounting an earlier circular is context throughout
+        para_historical = bool(p.sentences and HISTORICAL_RE.search(p.sentences[0]))
         # inherit directive lead-ins like "Stock Exchanges/Depositories are directed to:"
         parent = None
         if p.number and "." in p.number:
@@ -202,7 +210,7 @@ def extract_candidates(circ: ParsedCircular) -> list[dict[str, Any]]:
                 "paragraph": p,
                 "sentence": s,
                 "kind": kind,
-                "historical": bool(HISTORICAL_RE.search(s)),
+                "historical": para_historical or bool(HISTORICAL_RE.search(s)),
             })
     return cands
 
@@ -429,6 +437,8 @@ def impact_map(obligations: list[dict[str, Any]], org: dict[str, Any]) -> dict[s
         for pat, ds in tx.DEPT_RULES:
             if re.search(pat, s, re.I):
                 depts += [d for d in ds if d not in depts]
+        if ob.get("kind") == "exemption" or ob.get("category") == "Exemption":
+            depts = ["Compliance"] + [d for d in depts if d != "Compliance"]
         if "Compliance" not in depts:
             depts.append("Compliance")
         resolved = []
@@ -500,12 +510,20 @@ def implementation_plan(obligations: list[dict[str, Any]], impact: dict[str, Any
                 "evidence_requirement": evidence, "description": desc or ob["action"],
             })
 
+        short = _shorten(ob["title"].split(": ", 1)[-1], 70)
         if ob["kind"] == "exemption":
-            t("Assess", f"Confirm exemption applies to us: {ob['title'][:70]}", "Compliance", 5, ob["evidence"])
+            t("Assess", f"Confirm exemption applies to us: {short}", "Compliance", 5, ob["evidence"])
             continue
-        t("Assess", f"Gap assessment - {ob['title'][:80]}", "Compliance", 4,
+        t("Assess", f"Gap assessment: {short}", "Compliance", 4,
           "Gap assessment note", f"Compare current practice against {ob['paragraph_ref']}: \"{ob['source_text'][:220]}\"")
         cat = ob["category"]
+        src = ob["source_text"].lower()
+        if re.search(r"enrol|regist", src):
+            cat = "Registration & Enrolment"
+        elif re.search(r"tagg|nomenclature|named", src):
+            cat = "Account Operations"
+        elif re.search(r"report|inform|communicat|submit|provide details", src):
+            cat = "Reporting & Disclosure"
         if cat == "Registration & Enrolment":
             impl = "Complete enrolment / registration and record the confirmation"
         elif cat == "Account Operations":
@@ -518,11 +536,10 @@ def implementation_plan(obligations: list[dict[str, Any]], impact: dict[str, Any
             impl = "Update compliance calendar with the revised timeline"
         else:
             impl = "Implement the process change"
-        t("Implement", f"{impl}", owner, 12)
-        for sysname in m["systems"][:2]:
-            t("Implement", f"Update {sysname} for {ob['code']}", "IT & Information Security"
-              if "IT & Information Security" in [d["department"] for d in m["departments"]] or True else owner, 14)
-        t("Validate", f"Collect evidence & certify - {ob['code']}", owner, 19, ob["evidence"])
+        t("Implement", f"{impl} ({ob['code']})", owner, 12)
+        for sysname in m["systems"][:1]:
+            t("Implement", f"Configure {sysname} for {ob['code']}", "IT & Information Security", 14)
+        t("Validate", f"Collect evidence & certify {ob['code']}", owner, 19, ob["evidence"])
     phases = [
         {"name": "Assess", "description": "Confirm interpretation and current-state gaps"},
         {"name": "Implement", "description": "Process, system and policy changes"},

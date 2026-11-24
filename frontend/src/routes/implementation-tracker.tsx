@@ -1,326 +1,194 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo, useRef, useState } from "react";
+import { CheckCircle2, FileCheck2, Fingerprint, ListChecks, Loader2, Paperclip, Play } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/sera/app-shell";
 import { PageHeader } from "@/components/sera/page-header";
-import { StatusPill, riskTone } from "@/components/sera/status-pill";
-import { Card } from "@/components/ui/card";
+import { StatusPill } from "@/components/sera/status-pill";
+import { EmptyState } from "@/components/sera/empty-state";
 import { Button } from "@/components/ui/button";
-import { useDemo } from "@/lib/demo";
-import { formatDate } from "@/lib/format";
-import { CheckCircle2, TrendingUp, AlertTriangle, ArrowRight, Play, RefreshCcw } from "lucide-react";
-import { toast } from "sonner";
+import { Card } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ErrorBox, Loading, RiskPill, Stat } from "@/components/sera/bits";
+import { daysUntil, fmtDate, sera, useCirculars, useSeraMutation, useTasks, type TaskRow } from "@/lib/sera";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/implementation-tracker")({
   head: () => ({ meta: [{ title: "Implementation Tracker · SERA" }] }),
   component: Tracker,
 });
 
+const COLS: { key: TaskRow["status"]; label: string }[] = [
+  { key: "Pending", label: "To do" },
+  { key: "In Progress", label: "In progress" },
+  { key: "Overdue", label: "Overdue" },
+  { key: "Completed", label: "Done" },
+];
+
 function Tracker() {
-  const {
-    demoStage,
-    setDemoStage,
-    advanceDemo,
-    resetDemo,
-    obligations,
-    tasks,
-    isDemoActive,
-  } = useDemo();
-  const navigate = useNavigate();
+  const { data: tasks, error, isLoading } = useTasks();
+  const { data: circulars } = useCirculars();
+  const [wfFilter, setWfFilter] = useState<string>("all");
+  const [dept, setDept] = useState<string>("all");
+  const [evTask, setEvTask] = useState<TaskRow | null>(null);
+  const patch = useSeraMutation((a: { id: string; status: string }) => sera.patchTask(a.id, { status: a.status }));
 
-  const compliant = obligations.filter((o) => o.status === "Compliant").length;
-  const inProgress = obligations.filter((o) => o.status === "In Progress").length;
-  const blocked = obligations.filter((o) => o.status === "Blocked" || o.status === "Overdue").length;
-
-  const handleAdvance = () => {
-    if (demoStage === "PLAN_APPROVED") {
-      setDemoStage("IMPLEMENTING");
-      toast.success("Demo Stage Advanced: Development Complete", {
-        description: "SOP updated, scheduler configured, database logging code written.",
-      });
-    } else if (demoStage === "IMPLEMENTING") {
-      setDemoStage("EVIDENCE_REVIEW");
-      toast.success("Demo Stage Advanced: Evidence Review Mode", {
-        description: "QA test report generated. Compliance evidence uploaded and waiting for review.",
-      });
-    } else if (demoStage === "EVIDENCE_REVIEW") {
-      setDemoStage("COMPLIANT");
-      toast.success("Demo Stage Advanced: Obligation Compliant", {
-        description: "Compliance officer verified evidence. Added to Continuous Monitoring.",
-      });
-      // Redirect to compliance register
-      navigate({ to: "/compliance-register" });
-    }
-  };
-
-  const handleReset = () => {
-    resetDemo();
-    toast.success("Demo Reset", {
-      description: "Restored system to baseline state.",
-    });
-    navigate({ to: "/" });
-  };
-
-  const getAdvanceButtonText = () => {
-    switch (demoStage) {
-      case "PLAN_APPROVED":
-        return "Advance Stage: SOP & Dev Completed";
-      case "IMPLEMENTING":
-        return "Advance Stage: QA & Evidence Uploaded";
-      case "EVIDENCE_REVIEW":
-        return "Verify Evidence & Set Compliant";
-      case "COMPLIANT":
-        return "Compliant & Monitored";
-      default:
-        return "Initialize Plan First";
-    }
-  };
-
-  // Filter tasks to show only demo tasks if active
-  const filteredTasks = isDemoActive
-    ? tasks.filter((t) => t.obligationId === "o-demo")
-    : tasks;
+  const wfTitle = Object.fromEntries((circulars ?? []).map((c) => [c.workflow_id, c.title]));
+  const depts = useMemo(() => Array.from(new Set((tasks ?? []).map((t) => t.department ?? "-"))).sort(), [tasks]);
+  const rows = (tasks ?? []).filter((t) => (wfFilter === "all" || t.workflow_id === wfFilter) && (dept === "all" || t.department === dept));
+  const done = rows.filter((t) => t.status === "Completed").length;
+  const overdue = rows.filter((t) => t.status === "Overdue").length;
+  const evidenced = rows.filter((t) => t.evidence_files.length).length;
 
   return (
     <AppShell>
-      <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
-        <span>Workspace</span>
-        <span>/</span>
-        <span className="text-foreground">Implementation Tracker</span>
-      </div>
-
       <PageHeader
+        eyebrow="Execution"
         title="Implementation Tracker"
-        description={
-          isDemoActive
-            ? "SEBI Circular SEBI/HO/MIRSD/2026/104: Task In-Flight Action Queue & Proof Verification"
-            : "Live health of every commitment across the register."
-        }
-        actions={
-          isDemoActive ? (
-            <div className="flex gap-2 items-center">
-              <span className="mr-2 inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                Demo Progress Control
-              </span>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleReset}
-                className="gap-1.5 cursor-pointer text-xs h-9"
-              >
-                <RefreshCcw className="h-3.5 w-3.5" /> Reset
-              </Button>
-              <Button
-                onClick={handleAdvance}
-                disabled={demoStage === "COMPLIANT" || demoStage === "OFF" || demoStage === "DETECTED" || demoStage === "ANALYZED" || demoStage === "INTERPRETATION_APPROVED" || demoStage === "IMPACT_MAPPED"}
-                className="gap-1.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold shadow border-none cursor-pointer text-xs h-9"
-              >
-                <Play className="h-3.5 w-3.5 fill-current" /> {getAdvanceButtonText()}
-              </Button>
-            </div>
-          ) : null
-        }
+        description="Every approved task with its owner, deadline and evidence. Uploaded evidence is SHA-256 fingerprinted and written to the audit chain."
       />
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <MetricCard label="Compliant" value={compliant} icon={<CheckCircle2 className="h-4 w-4" />} tone="success" />
-        <MetricCard label="In Progress" value={inProgress} icon={<TrendingUp className="h-4 w-4" />} tone="info" />
-        <MetricCard label="At Risk" value={blocked} icon={<AlertTriangle className="h-4 w-4" />} tone="danger" />
-      </div>
-
-      <Card className="mt-8 overflow-hidden rounded-2xl p-0 bg-card border-border">
-        <div className="border-b border-border px-6 py-4 flex items-center justify-between bg-surface-2/45">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            {isDemoActive ? "SEBI Client Mobile Re-verification Tasks Breakdown" : "Obligation Progress"}
-          </span>
-          {isDemoActive && (
-            <span className="text-xs text-muted-foreground font-mono">
-              Stage Code: <strong className="text-primary">{demoStage}</strong>
-            </span>
-          )}
-        </div>
-
-        {isDemoActive ? (
-          // Detailed task tracker layout for Stockbroker re-verification
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-surface-2/30 text-left text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground border-b border-border">
-                <th className="px-6 py-3">Task Details</th>
-                <th className="px-6 py-3">Assignee</th>
-                <th className="px-6 py-3">Due Date</th>
-                <th className="px-6 py-3">Status</th>
-                <th className="px-6 py-3">Progress</th>
-                <th className="px-6 py-3">Evidence Item / Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredTasks.map((t) => {
-                const evidenceName = getEvidenceName(t.id);
-                const isUploaded =
-                  (demoStage === "EVIDENCE_REVIEW" || demoStage === "COMPLIANT") &&
-                  (t.id !== "t-demo-comp1");
-                const isComplianceTask = t.id === "t-demo-comp1";
-
-                return (
-                  <tr key={t.id} className="border-t border-border hover:bg-surface-2/30 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-foreground text-xs leading-normal">{t.title}</div>
-                      <div className="text-[10px] text-muted-foreground mt-0.5">Dependency: None</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-xs text-foreground/80">{t.assignee}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-xs text-muted-foreground font-mono">{formatDate(t.dueDate)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusPill
-                        tone={
-                          t.status === "Done"
-                            ? "success"
-                            : t.status === "In Progress"
-                              ? "info"
-                              : t.status === "Review"
-                                ? "warning"
-                                : "neutral"
-                        }
-                        dot
-                      >
-                        {t.status}
-                      </StatusPill>
-                    </td>
-                    <td className="px-6 py-4 w-40">
-                      <div className="flex items-center gap-2">
-                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full bg-primary transition-all duration-300"
-                            style={{ width: `${t.progress}%` }}
-                          />
-                        </div>
-                        <span className="text-[11px] tabular-nums font-mono text-muted-foreground">{t.progress}%</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-xs font-normal">
-                      {isComplianceTask ? (
-                        demoStage === "EVIDENCE_REVIEW" ? (
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              setDemoStage("COMPLIANT");
-                              toast.success("Obligation marked compliant", {
-                                description: "Human verification sealed the KYC audit trail.",
-                              });
-                              navigate({ to: "/compliance-register" });
-                            }}
-                            className="h-6 text-[10px] bg-primary text-primary-foreground font-semibold cursor-pointer border-none px-2 rounded-md"
-                          >
-                            Verify & Seal
-                          </Button>
-                        ) : demoStage === "COMPLIANT" ? (
-                          <span className="text-success font-semibold flex items-center gap-1">
-                            &bull; Verification Sealed
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground italic">Awaiting uploads</span>
-                        )
-                      ) : isUploaded ? (
-                        <div className="flex flex-col">
-                          <span className="text-success font-semibold flex items-center gap-1 font-mono text-[10px]">
-                            &bull; Uploaded
-                          </span>
-                          <span className="text-[9.5px] text-muted-foreground underline truncate max-w-[150px]">
-                            {evidenceName}
-                          </span>
-                        </div>
-                      ) : t.status === "Done" ? (
-                        <span className="text-muted-foreground italic">Generating...</span>
-                      ) : (
-                        <span className="text-muted-foreground/50">Pending completion</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        ) : (
-          // Default baseline mockup rows
-          <div className="divide-y divide-border bg-card">
-            {obligations.map((o) => (
-              <div key={o.id} className="grid grid-cols-[1fr_auto] items-center gap-6 px-6 py-4 hover:bg-surface-2/30 transition-colors">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-[11px] text-muted-foreground">{o.code}</span>
-                    <StatusPill tone={riskTone(o.risk)}>{o.risk}</StatusPill>
-                  </div>
-                  <div className="mt-1 truncate text-sm font-medium">{o.title}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {o.owner} · {o.department} · due {formatDate(o.dueDate)}
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="h-1.5 w-48 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-primary"
-                      style={{ width: `${o.progress}%` }}
-                    />
-                  </div>
-                  <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">
-                    {o.progress}%
-                  </span>
-                </div>
-              </div>
-            ))}
+      {error && <ErrorBox error={error} />}
+      {isLoading && <Loading />}
+      {tasks && tasks.length === 0 && (
+        <EmptyState icon={<ListChecks className="h-5 w-5" />} title="No live tasks yet" description="Tasks appear here after a plan is approved at Gate 2." action={<Button asChild><Link to="/implementation-plan">Implementation plan</Link></Button>} />
+      )}
+      {tasks && tasks.length > 0 && (
+        <>
+          <div className="mb-6 grid gap-4 md:grid-cols-4">
+            <Stat label="Tasks" value={rows.length} />
+            <Stat label="Completed" value={`${done}/${rows.length}`} tone="success" hint={`${rows.length ? Math.round((100 * done) / rows.length) : 0}% complete`} />
+            <Stat label="Overdue" value={overdue} tone={overdue ? "danger" : undefined} />
+            <Stat label="With evidence" value={evidenced} hint="hash-verified files" />
           </div>
-        )}
-      </Card>
+          <div className="mb-4 flex flex-wrap gap-3">
+            <select value={wfFilter} onChange={(e) => setWfFilter(e.target.value)} className="h-9 rounded-md border border-border bg-surface px-3 text-sm">
+              <option value="all">All circulars</option>
+              {Array.from(new Set(tasks.map((t) => t.workflow_id))).map((w) => <option key={w} value={w}>{(wfTitle[w] ?? w).slice(0, 70)}</option>)}
+            </select>
+            <select value={dept} onChange={(e) => setDept(e.target.value)} className="h-9 rounded-md border border-border bg-surface px-3 text-sm">
+              <option value="all">All departments</option>
+              {depts.map((d) => <option key={d}>{d}</option>)}
+            </select>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-4">
+            {COLS.map((col) => {
+              const list = rows.filter((t) => (col.key === "Pending" ? t.status === "Pending" || t.status === "Blocked" : t.status === col.key));
+              return (
+                <div key={col.key} className="rounded-2xl bg-surface-2/50 p-3">
+                  <div className="mb-3 flex items-center justify-between px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                    {col.label}<span className="rounded-full bg-background px-2 py-0.5">{list.length}</span>
+                  </div>
+                  <div className="space-y-3">
+                    {list.map((t) => {
+                      const d = daysUntil(t.due_date);
+                      return (
+                        <Card key={t.id} className={cn("rounded-xl p-4", t.status === "Overdue" && "border-destructive/40")}>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-mono text-[10px] text-muted-foreground">{t.obligation_code} · {t.phase}</span>
+                            <RiskPill risk={t.priority} />
+                          </div>
+                          <div className="mt-1.5 text-[13px] font-semibold leading-snug">{t.title}</div>
+                          <div className="mt-1 text-xs text-muted-foreground">{t.department}</div>
+                          <div className="mt-2 flex items-center justify-between text-xs">
+                            <span className={cn(d !== null && d < 0 && t.status !== "Completed" && "font-semibold text-destructive")}>Due {fmtDate(t.due_date)}</span>
+                            {t.evidence_files.length > 0 && <span className="inline-flex items-center gap-1 text-success"><Fingerprint className="h-3 w-3" />{t.evidence_files.length}</span>}
+                          </div>
+                          {t.status !== "Completed" && (
+                            <div className="mt-3 flex gap-2">
+                              {t.raw_status === "Pending" && (
+                                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => patch.mutate({ id: t.id, status: "In Progress" }, { onError: (e) => toast.error(e.message) })}>
+                                  <Play className="mr-1 h-3 w-3" /> Start
+                                </Button>
+                              )}
+                              <Button size="sm" className="h-7 text-xs" onClick={() => setEvTask(t)}>
+                                <Paperclip className="mr-1 h-3 w-3" /> {t.evidence_requirement ? "Submit evidence" : "Complete"}
+                              </Button>
+                            </div>
+                          )}
+                          {t.status === "Completed" && (
+                            <button onClick={() => setEvTask(t)} className="mt-2 inline-flex items-center gap-1 text-xs text-success hover:underline">
+                              <CheckCircle2 className="h-3 w-3" /> Completed {t.completed_at ? fmtDate(t.completed_at) : ""} · view evidence
+                            </button>
+                          )}
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+      {evTask && <EvidenceDialog task={evTask} onClose={() => setEvTask(null)} />}
     </AppShell>
   );
 }
 
-// Map task ID to evidence filename
-function getEvidenceName(id: string) {
-  switch (id) {
-    case "t-demo-it1":
-      return "Config_Change_Scheduler.log";
-    case "t-demo-it2":
-      return "SMS_Gateway_Config.png";
-    case "t-demo-it3":
-      return "DB_Migration_Logs.sql";
-    case "t-demo-ops1":
-      return "SOP_Client_Mobile_v2.pdf";
-    case "t-demo-cust1":
-      return "CRM_Email_Template.html";
-    case "t-demo-qa1":
-      return "QA_Test_Report_OTP.pdf";
-    default:
-      return "evidence_file.dat";
-  }
-}
+function EvidenceDialog({ task, onClose }: { task: TaskRow; onClose: () => void }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [note, setNote] = useState(task.evidence_note ?? "");
+  const [complete, setComplete] = useState(true);
+  const ref = useRef<HTMLInputElement>(null);
+  const upload = useSeraMutation(() => sera.evidence(task.id, file!, note, complete));
+  const finish = useSeraMutation(() => sera.patchTask(task.id, { status: "Completed", note }));
+  const readOnly = task.status === "Completed";
+  const busy = upload.isPending || finish.isPending;
 
-function MetricCard({
-  label,
-  value,
-  icon,
-  tone,
-}: {
-  label: string;
-  value: number;
-  icon: React.ReactNode;
-  tone: "success" | "info" | "danger";
-}) {
+  const submit = () => {
+    const p = file ? upload.mutateAsync(undefined) : finish.mutateAsync(undefined);
+    p.then(() => { toast.success(file ? "Evidence fingerprinted and recorded" : "Task completed"); onClose(); }).catch((e) => toast.error(e.message));
+  };
+
   return (
-    <Card className="rounded-2xl p-5 bg-card border-border">
-      <div className="mb-5 flex items-center justify-between">
-        <div
-          className={
-            "flex h-9 w-9 items-center justify-center rounded-lg " +
-            (tone === "success"
-              ? "bg-success/10 text-success"
-              : tone === "info"
-                ? "bg-info/10 text-info"
-                : "bg-destructive/10 text-destructive")
-          }
-        >
-          {icon}
-        </div>
-      </div>
-      <div className="text-3xl font-semibold tracking-tight text-foreground">{String(value).padStart(2, "0")}</div>
-      <div className="mt-1 text-sm text-muted-foreground">{label}</div>
-    </Card>
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="leading-snug">{task.title}</DialogTitle>
+          <DialogDescription>{task.description}</DialogDescription>
+        </DialogHeader>
+        {task.evidence_requirement && (
+          <div className="rounded-lg bg-surface-2 p-3 text-[13px]"><span className="font-semibold">Required evidence: </span>{task.evidence_requirement}</div>
+        )}
+        {task.evidence_files.length > 0 && (
+          <div className="space-y-2">
+            {task.evidence_files.map((f) => (
+              <a key={f.sha256 + f.name} href={sera.evidenceUrl(task.id, f.name)} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-lg border border-border p-2.5 text-[13px] hover:border-primary/40">
+                <FileCheck2 className="h-4 w-4 text-success" />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-medium">{f.name}</div>
+                  <div className="truncate font-mono text-[10px] text-muted-foreground">sha256 {f.sha256.slice(0, 24)}… · {(f.size / 1024).toFixed(1)} KB · {f.by}</div>
+                </div>
+                <StatusPill tone="success">verified</StatusPill>
+              </a>
+            ))}
+          </div>
+        )}
+        {!readOnly && (
+          <>
+            <div onClick={() => ref.current?.click()} className="cursor-pointer rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground hover:border-primary/50">
+              {file ? <span className="text-foreground">{file.name}</span> : "Click to attach an evidence file (PDF, screenshot, export…)"}
+              <input ref={ref} type="file" hidden onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            </div>
+            <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Completion note (what was done, where it is recorded)" />
+            {file && (
+              <label className="flex items-center gap-2 text-sm"><Checkbox checked={complete} onCheckedChange={(v) => setComplete(!!v)} /> Mark task as completed</label>
+            )}
+          </>
+        )}
+        {readOnly && task.evidence_note && <div className="text-sm"><span className="text-muted-foreground">Note: </span>{task.evidence_note}</div>}
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Close</Button>
+          {!readOnly && (
+            <Button disabled={busy || (!file && !!task.evidence_requirement && task.evidence_files.length === 0 && !note.trim())} onClick={submit}>
+              {busy && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              {file ? "Upload evidence" : "Mark complete"}
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
